@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "04-04: Task 1 complete, Task 2 blocked (checkpoint:human-action -- contract deployment)"
-last_updated: "2026-04-04T15:07:55.849Z"
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-04-04T15:17:16.034Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 6
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 04 (financial-ops) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-04
 
@@ -62,6 +62,7 @@ Progress: [████████████████████] 8/8 pla
 | Phase 03-identity P02 | 79 | 2 tasks | 3 files |
 | Phase 04-financial-ops P03 | 15 | 2 tasks | 12 files |
 | Phase 04-financial-ops P04 | 2 | 1 tasks | 3 files |
+| Phase 04-financial-ops P04 | 15 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,7 @@ Recent decisions affecting current work:
 - [Phase 04-financial-ops]: Static import for @genie/db in confirm.ts ensures vi.mock() intercepts correctly in tests
 - [Phase 04-financial-ops]: get_balance available to all users (ungated); resolve_contact and send_usdc require userId (DB + verification gate)
 - [Phase 04-financial-ops]: Export chain from clients.ts; pass explicit account + chain to writeContract -- viem 2.45 requires both for non-narrowed wallet client types
+- [Phase 04-financial-ops]: Deploy to World Chain (chain ID 4801) via forge script with broadcast
 
 ### Pending Todos
 
@@ -110,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T15:07:55.845Z
-Stopped at: 04-04: Task 1 complete, Task 2 blocked (checkpoint:human-action -- contract deployment)
+Last session: 2026-04-04T15:17:16.031Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None

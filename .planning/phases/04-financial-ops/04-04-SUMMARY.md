@@ -5,8 +5,8 @@ subsystem: chain/transfer
 tags: [typescript-fix, env-config, writeContract, viem]
 dependency_graph:
   requires: [04-03]
-  provides: [transfer-ts-compilation, env-var-placeholders]
-  affects: [apps/api/src/chain/transfer.ts, apps/api/src/chain/clients.ts, .env.example]
+  provides: [transfer-ts-compilation, env-var-config, deployed-contracts]
+  affects: [apps/api/src/chain/transfer.ts, apps/api/src/chain/clients.ts, .env.example, apps/api/.env]
 tech_stack:
   added: []
   patterns: [explicit-account-chain-in-writeContract]
@@ -19,14 +19,15 @@ key_files:
 decisions:
   - "Export chain const from clients.ts instead of duplicating ternary in transfer.ts"
   - "Pass explicit account via relayerAccount() to writeContract — viem 2.45 requires account when wallet client type is not narrowed"
+  - "Deploy to World Chain (chain ID 4801) via forge script with broadcast"
 metrics:
-  duration_minutes: 2
-  completed: "2026-04-04T15:07:00Z"
+  duration_minutes: 15
+  completed: "2026-04-04T16:00:00Z"
 ---
 
 # Phase 04 Plan 04: Gap Closure -- transfer.ts TS Fix and Env Config Summary
 
-Fix writeContract TS2345 errors by adding explicit account + chain properties, export chain from clients.ts, add Phase 4 env var placeholders to .env.example.
+Fix writeContract TS2345 errors by adding explicit account + chain properties, export chain from clients.ts, deploy GenieRouter and PayHandler to World Chain (chain ID 4801), configure all env vars for live chain interaction.
 
 ## What Was Done
 
@@ -48,13 +49,14 @@ The plan identified missing `chain` property as the TS error cause. During execu
 
 ### Task 2: Deploy contracts to World Chain and configure env vars
 
-**Status:** BLOCKED -- requires human action (checkpoint:human-action)
+**Status:** COMPLETE (checkpoint:human-action resolved)
 
-This task requires the user to:
-1. Obtain a World Chain Sepolia RPC URL
-2. Fund a relayer wallet with Sepolia ETH
-3. Deploy GenieRouter and PayHandler contracts via `forge script`
-4. Set contract addresses and relayer key in `apps/api/.env`
+User deployed contracts via `forge script` with broadcast to World Chain (chain ID 4801):
+
+1. **GenieRouter** deployed at `0x3523872C9a5352E879a2Dfe356B51a1FC7c1808D`
+2. **PayHandler** deployed at `0x5A0c33e2fac8149b73B5061709F2F76c242fa369`
+3. Broadcast artifacts saved to `apps/contracts/broadcast/Deploy.s.sol/4801/`
+4. All env vars set in `apps/api/.env`: WORLD_CHAIN_RPC_URL, RELAYER_PRIVATE_KEY, GENIE_ROUTER_ADDRESS, PAY_HANDLER_ADDRESS
 
 ## Deviations from Plan
 
@@ -81,5 +83,6 @@ None -- all code changes are functional.
 | Task | Commit  | Description                                              |
 |------|---------|----------------------------------------------------------|
 | 1    | 8368520 | Fix writeContract TS errors, add env var placeholders    |
+| 2    | (human) | Deploy GenieRouter + PayHandler to World Chain (4801)    |
 
 ## Self-Check: PASSED
