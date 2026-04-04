@@ -2,10 +2,12 @@
 
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
+import { MiniKit } from '@worldcoin/minikit-js';
 import { useSession } from 'next-auth/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { ContactList, parseContactList, type ContactData } from '../ContactCard';
 import { ThinkingIndicator } from '../ThinkingIndicator';
 
 export interface AiInsight {
@@ -58,10 +60,14 @@ export const ChatInterface = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, status]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim() || (status !== 'ready' && status !== 'error')) return;
     const text = input.trim();
     setInput('');
+    // Haptic on send (D-14)
+    if (MiniKit.isInstalled()) {
+      await MiniKit.sendHapticFeedback({ hapticsType: 'impact', style: 'medium' });
+    }
     sendMessage({ text }, { body: { userId: session?.user?.id } });
   };
 
@@ -192,6 +198,19 @@ function AiMessageBubble({
     .filter((p) => p.type === 'text')
     .map((p) => p.text ?? '')
     .join('');
+
+  const contactData = parseContactList(textContent);
+
+  const handleContactSelect = (contact: ContactData) => {
+    // For hackathon: log selection. In production, this would feed back into sendMessage.
+    console.log('[contact-select]', contact.name, contact.walletAddress);
+  };
+
+  // Strip the JSON fence from rendered markdown if contacts detected
+  const markdownText = contactData
+    ? textContent.replace(/```json\s*\n[\s\S]*?\n```/, '').trim()
+    : textContent;
+
   return (
     <div className="flex items-end gap-2">
       <div className="flex-shrink-0 w-20 h-24 self-end">
@@ -223,51 +242,54 @@ function AiMessageBubble({
           </span>
         </div>
         <div className="text-sm leading-relaxed prose-invert">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              p: ({ children }) => (
-                <p className="text-sm leading-relaxed mb-2 last:mb-0">
-                  {children}
-                </p>
-              ),
-              strong: ({ children }) => (
-                <strong className="font-bold text-white">{children}</strong>
-              ),
-              code: ({ children }) => (
-                <code className="bg-background px-1 text-accent text-xs font-mono">
-                  {children}
-                </code>
-              ),
-              pre: ({ children }) => (
-                <pre className="bg-background p-3 text-xs font-mono overflow-x-auto text-white/80 my-2">
-                  {children}
-                </pre>
-              ),
-              ul: ({ children }) => (
-                <ul className="list-disc list-inside text-sm space-y-1 my-2">
-                  {children}
-                </ul>
-              ),
-              ol: ({ children }) => (
-                <ol className="list-decimal list-inside text-sm space-y-1 my-2">
-                  {children}
-                </ol>
-              ),
-              a: ({ href, children }) => (
-                <a
-                  href={href}
-                  className="text-accent underline"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {children}
-                </a>
-              ),
-            }}
-          >
-            {textContent}
-          </ReactMarkdown>
+          {markdownText && (
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ children }) => (
+                  <p className="text-sm leading-relaxed mb-2 last:mb-0">
+                    {children}
+                  </p>
+                ),
+                strong: ({ children }) => (
+                  <strong className="font-bold text-white">{children}</strong>
+                ),
+                code: ({ children }) => (
+                  <code className="bg-background px-1 text-accent text-xs font-mono">
+                    {children}
+                  </code>
+                ),
+                pre: ({ children }) => (
+                  <pre className="bg-background p-3 text-xs font-mono overflow-x-auto text-white/80 my-2">
+                    {children}
+                  </pre>
+                ),
+                ul: ({ children }) => (
+                  <ul className="list-disc list-inside text-sm space-y-1 my-2">
+                    {children}
+                  </ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="list-decimal list-inside text-sm space-y-1 my-2">
+                    {children}
+                  </ol>
+                ),
+                a: ({ href, children }) => (
+                  <a
+                    href={href}
+                    className="text-accent underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {children}
+                  </a>
+                ),
+              }}
+            >
+              {markdownText}
+            </ReactMarkdown>
+          )}
+          {contactData && <ContactList data={contactData} onSelect={handleContactSelect} />}
         </div>
       </div>
     </div>

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 06-mini-app-shell-06-01-PLAN.md
-last_updated: "2026-04-04T19:46:29.017Z"
-last_activity: 2026-04-04
+status: executing
+stopped_at: Phase 6 context gathered
+last_updated: "2026-04-04T19:38:13.736Z"
+last_activity: 2026-04-04 -- Phase 06 execution started
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 5
+  completed_phases: 5
+  total_plans: 18
+  completed_plans: 15
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** A single chat message can trigger a verified, human-backed financial transaction — send money, bridge USDC cross-chain, or plan savings — all inside World App with proof-of-human identity.
-**Current focus:** Phase 03 — identity
+**Current focus:** Phase 06 — mini-app-shell
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-04-04
+Phase: 06 (mini-app-shell) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 06
+Last activity: 2026-04-04 -- Phase 06 execution started
 
 Progress: [████████████████████] 8/8 plans (100%)
 
@@ -60,7 +60,10 @@ Progress: [████████████████████] 8/8 pla
 | Phase 02-data-layer P04 | 3 | 2 tasks | 4 files |
 | Phase 03-identity P01 | 7 | 2 tasks | 7 files |
 | Phase 03-identity P02 | 79 | 2 tasks | 3 files |
-| Phase 06-mini-app-shell P01 | 415 | 2 tasks | 4 files |
+| Phase 04-financial-ops P03 | 15 | 2 tasks | 12 files |
+| Phase 04-financial-ops P04 | 2 | 1 tasks | 3 files |
+| Phase 04-financial-ops P04 | 15 | 2 tasks | 5 files |
+| Phase 05-cross-chain-social P03 | 192 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -93,8 +96,12 @@ Recent decisions affecting current work:
 - [Phase 03-identity]: invalidateContextCache called after successful verify — ensures isVerified propagates immediately without TTL delay
 - [Phase 03-identity]: requireVerified returns null for pass, structured VERIFICATION_REQUIRED error for fail — Phase 4/5 gated tools import and call this guard
 - [Phase 03-identity]: System prompt lists concrete gated actions (send money, debts, goals) and available actions so agent guides unverified users to World ID verify button
-- [Phase 06-mini-app-shell]: useChat v5 requires DefaultChatTransport({ api }) passed via transport option — no direct api string param
-- [Phase 06-mini-app-shell]: sendMessage({ text }, { body: { userId } }) passes per-request body to avoid stale session capture
+- [Phase 04-financial-ops]: Static import for @genie/db in confirm.ts ensures vi.mock() intercepts correctly in tests
+- [Phase 04-financial-ops]: get_balance available to all users (ungated); resolve_contact and send_usdc require userId (DB + verification gate)
+- [Phase 04-financial-ops]: Export chain from clients.ts; pass explicit account + chain to writeContract -- viem 2.45 requires both for non-narrowed wallet client types
+- [Phase 04-financial-ops]: Deploy to World Chain (chain ID 4801) via forge script with broadcast
+- [Phase 05-cross-chain-social]: XCHD-01 formally deferred -- cross-chain deposits not implemented, acknowledged in system prompt as coming soon
+- [Phase 05-cross-chain-social]: Settlement notices injected into enrichedUserMessage before assembleContext -- context injection pattern D-10
 
 ### Pending Todos
 
@@ -108,6 +115,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T19:46:29.014Z
-Stopped at: Completed 06-mini-app-shell-06-01-PLAN.md
-Resume file: None
+Last session: 2026-04-04T19:07:00.975Z
+Stopped at: Phase 6 context gathered
+Resume file: .planning/phases/06-mini-app-shell/06-CONTEXT.md
