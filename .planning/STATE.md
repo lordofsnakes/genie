@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04-financial-ops-04-02-PLAN.md
-last_updated: "2026-04-04T16:35:00.000Z"
+status: verifying
+stopped_at: Completed 04-financial-ops-04-03-PLAN.md
+last_updated: "2026-04-04T14:43:03.972Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 3
+  completed_plans: 5
   percent: 100
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** A single chat message can trigger a verified, human-backed financial transaction — send money, bridge USDC cross-chain, or plan savings — all inside World App with proof-of-human identity.
-**Current focus:** Phase 04 — financial-ops
+**Current focus:** Phase 03 — identity
 
 ## Current Position
 
-Phase: 04 (financial-ops) — EXECUTING
-Plan: 3 of 3
-Status: Plan 02 complete — ready for Plan 03 (agent wiring)
+Phase: 4
+Plan: Not started
+Status: Phase complete — ready for verification
 Last activity: 2026-04-04
 
-Progress: [████████████████████] 6/6 plans (100%)
+Progress: [████████████████████] 8/8 plans (100%)
 
 ## Performance Metrics
 
@@ -60,8 +60,7 @@ Progress: [████████████████████] 6/6 pla
 | Phase 02-data-layer P04 | 3 | 2 tasks | 4 files |
 | Phase 03-identity P01 | 7 | 2 tasks | 7 files |
 | Phase 03-identity P02 | 79 | 2 tasks | 3 files |
-| Phase 04-financial-ops P01 | 4 | 2 tasks | 13 files |
-| Phase 04-financial-ops P02 | 15 | 2 tasks | 7 files |
+| Phase 04-financial-ops P03 | 15 | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -94,12 +93,8 @@ Recent decisions affecting current work:
 - [Phase 03-identity]: invalidateContextCache called after successful verify — ensures isVerified propagates immediately without TTL delay
 - [Phase 03-identity]: requireVerified returns null for pass, structured VERIFICATION_REQUIRED error for fail — Phase 4/5 gated tools import and call this guard
 - [Phase 03-identity]: System prompt lists concrete gated actions (send money, debts, goals) and available actions so agent guides unverified users to World ID verify button
-- [Phase 04-financial-ops]: [Phase 04-01]: SafeERC20 used in GenieRouter/PayHandler over raw IERC20 calls — prevents silent failure on non-reverting tokens
-- [Phase 04-financial-ops]: [Phase 04-01]: Lazy walletClient init in getWalletClient() — prevents crash on module import when RELAYER_PRIVATE_KEY not set in tests
-- [Phase 04-financial-ops]: [Phase 04-01]: transactions.status defaults to 'confirmed' for backward compat — existing rows and direct sends auto-confirmed
-- [Phase 04-financial-ops]: [Phase 04-02]: Factory pattern for all financial tools — binds userId/userContext at registration time per request
-- [Phase 04-financial-ops]: [Phase 04-02]: resolve_contact uses includes() fuzzy match as primary strategy — 'Alice' matches both 'Alice' and 'Alice Smith', triggering D-08 disambiguation
-- [Phase 04-financial-ops]: [Phase 04-02]: send_usdc cancels existing pending txs before creating new one — prevents multiple pending txs per user
+- [Phase 04-financial-ops]: Static import for @genie/db in confirm.ts ensures vi.mock() intercepts correctly in tests
+- [Phase 04-financial-ops]: get_balance available to all users (ungated); resolve_contact and send_usdc require userId (DB + verification gate)
 
 ### Pending Todos
 
@@ -113,6 +108,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T16:35:00.000Z
-Stopped at: Completed 04-financial-ops-04-02-PLAN.md
+Last session: 2026-04-04T14:43:03.969Z
+Stopped at: Completed 04-financial-ops-04-03-PLAN.md
 Resume file: None
