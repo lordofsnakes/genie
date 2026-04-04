@@ -36,20 +36,20 @@ Requirements for hackathon demo. Each maps to roadmap phases.
 
 ### Cross-Chain Deposits
 
-- [x] **XCHD-01**: User can deposit USDC from Ethereum/Base/Arbitrum to World Chain via Arc CCTP
+- [ ] **XCHD-01**: User can deposit USDC from Ethereum/Base/Arbitrum to World Chain via Arc CCTP
 
 ### Spending & Social
 
 - [ ] **SPND-01**: Agent categorizes transactions (food, transport, entertainment, bills, transfers)
-- [x] **SPND-02**: User can ask spending summaries ("how much did I spend this week?")
-- [x] **DEBT-01**: User can create debt entries ("Alice owes me $30 for dinner")
-- [x] **DEBT-02**: Agent auto-detects incoming transfers and marks debts as settled
+- [ ] **SPND-02**: User can ask spending summaries ("how much did I spend this week?")
+- [ ] **DEBT-01**: User can create debt entries ("Alice owes me $30 for dinner")
+- [ ] **DEBT-02**: Agent auto-detects incoming transfers and marks debts as settled
 
 ### Mini App Shell
 
-- [ ] **MAPP-01**: Next.js 14 Mini App runs inside World App via MiniKit 2.0 SDK
-- [ ] **MAPP-02**: Chat-first interface with dark theme and neon blue accents
-- [ ] **MAPP-03**: Streaming AI responses render token-by-token
+- [x] **MAPP-01**: Next.js 14 Mini App runs inside World App via MiniKit 2.0 SDK
+- [x] **MAPP-02**: Chat-first interface with dark theme and neon blue accents
+- [x] **MAPP-03**: Streaming AI responses render token-by-token
 - [ ] **MAPP-04**: Contact management (add, list, resolve)
 
 ## v2 Requirements
@@ -105,14 +105,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FOPS-04 | Phase 4 | Pending |
 | FOPS-05 | Phase 4 | Pending |
 | FOPS-06 | Phase 4 | Pending |
-| XCHD-01 | Phase 5 | Complete |
+| XCHD-01 | Phase 5 | Pending |
 | SPND-01 | Phase 5 | Pending |
-| SPND-02 | Phase 5 | Complete |
-| DEBT-01 | Phase 5 | Complete |
-| DEBT-02 | Phase 5 | Complete |
-| MAPP-01 | Phase 6 | Pending |
-| MAPP-02 | Phase 6 | Pending |
-| MAPP-03 | Phase 6 | Pending |
+| SPND-02 | Phase 5 | Pending |
+| DEBT-01 | Phase 5 | Pending |
+| DEBT-02 | Phase 5 | Pending |
+| MAPP-01 | Phase 6 | Complete |
+| MAPP-02 | Phase 6 | Complete |
+| MAPP-03 | Phase 6 | Complete |
 | MAPP-04 | Phase 6 | Pending |
 
 **Coverage:**

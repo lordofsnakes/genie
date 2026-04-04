@@ -1,27 +1,19 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
+import { useSession } from 'next-auth/react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { ThinkingIndicator } from '../ThinkingIndicator';
 
 export interface AiInsight {
   label: string;
   value: string;
 }
 
-export interface ChatMessage {
-  id: string;
-  type: 'user' | 'ai';
-  content: string;
-  insights?: AiInsight[];
-}
-
-interface ChatInterfaceProps {
-  userAvatarSrc?: string;
-  onInsightsClick?: () => void;
-}
-
-const INITIAL_MESSAGES: ChatMessage[] = [
-  { id: '1', type: 'ai', content: 'Hi! How can I help you?' },
-];
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 const PLACEHOLDERS = [
   'Go off.',
@@ -31,48 +23,46 @@ const PLACEHOLDERS = [
   "Let's cook.",
 ];
 
-const NAV_HEIGHT = 108;
-
-export const ChatInterface = ({
-  userAvatarSrc = '',
-  onInsightsClick,
-}: ChatInterfaceProps) => {
-  const [inputValue, setInputValue] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
-  const [inputBottom, setInputBottom] = useState(NAV_HEIGHT);
+export const ChatInterface = () => {
+  const { data: session } = useSession();
+  const [input, setInput] = useState('');
+  const [canScroll, setCanScroll] = useState(false);
   const [placeholder] = useState(
     () => PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)],
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const transport = useMemo(
+    () => new DefaultChatTransport({ api: `${API_URL}/api/chat` }),
+    [],
+  );
+
+  const { messages, sendMessage, status, error, regenerate } = useChat({
+    transport,
+  });
+
+  const isThinking = status === 'submitted';
 
   useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const onResize = () => {
-      const keyboardHeight = window.innerHeight - vv.height - vv.offsetTop;
-      setInputBottom(Math.max(NAV_HEIGHT, keyboardHeight + 8));
-    };
-    vv.addEventListener('resize', onResize);
-    vv.addEventListener('scroll', onResize);
-    return () => {
-      vv.removeEventListener('resize', onResize);
-      vv.removeEventListener('scroll', onResize);
-    };
-  }, []);
+    const el = scrollRef.current;
+    if (!el) return;
+    const check = () => setCanScroll(el.scrollHeight > el.clientHeight);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [messages, status]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, status]);
 
   const handleSend = () => {
-    const trimmed = inputValue.trim();
-    if (!trimmed) return;
-    setMessages((prev) => [
-      ...prev,
-      { id: Date.now().toString(), type: 'user', content: trimmed },
-    ]);
-    setInputValue('');
-    // API integration goes here
+    if (!input.trim() || (status !== 'ready' && status !== 'error')) return;
+    const text = input.trim();
+    setInput('');
+    sendMessage({ text }, { body: { userId: session?.user?.id } });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -80,38 +70,38 @@ export const ChatInterface = ({
   };
 
   return (
-    <div
-      className="relative flex flex-col bg-background text-white font-body overflow-hidden touch-none"
-      style={{ height: '100dvh', maxHeight: '100dvh' }}
-    >
+    <div className="flex flex-col bg-background text-white font-body h-full">
       {/* Scrollable messages */}
       <div
-        className="flex-1 overflow-y-auto overscroll-contain pt-6 pb-6 px-6"
-        style={{ touchAction: 'pan-y' }}
+        ref={scrollRef}
+        className={`flex-1 min-h-0 overscroll-contain pt-6 pb-4 px-6 ${canScroll ? 'overflow-y-auto' : 'overflow-y-hidden'}`}
+        style={{ touchAction: canScroll ? 'pan-y' : 'none' }}
       >
         <div className="flex flex-col gap-10 max-w-md mx-auto">
+          {messages.length === 0 && <EmptyState />}
           {messages.map((message) =>
-            message.type === 'user' ? (
-              <UserMessage key={message.id} content={message.content} />
+            message.role === 'user' ? (
+              <UserMessage key={message.id} parts={message.parts} />
             ) : (
-              <AiMessage key={message.id} content={message.content} insights={message.insights} />
+              <AiMessageBubble key={message.id} parts={message.parts} />
             ),
+          )}
+          {isThinking && <ThinkingIndicator />}
+          {error && status === 'error' && (
+            <ErrorMessage error={error} onRetry={() => regenerate()} />
           )}
           <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* Chat input */}
-      <div
-        className="fixed left-0 w-full px-6 z-40 transition-[bottom] duration-75"
-        style={{ bottom: inputBottom }}
-      >
+      {/* Chat input — in-flow so it never scrolls with messages */}
+      <div className="flex-shrink-0 px-6 py-3 bg-background touch-none" style={{ touchAction: 'none' }}>
         <div className="max-w-md mx-auto">
           <div className="bg-surface p-2 flex items-center gap-2">
             <input
               type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
               className="flex-1 bg-transparent border-none focus:ring-0 text-sm px-4 placeholder:text-white/30 text-white outline-none"
@@ -130,17 +120,7 @@ export const ChatInterface = ({
   );
 };
 
-function UserMessage({ content }: { content: string }) {
-  return (
-    <div className="flex justify-end pl-12">
-      <div className="bg-surface border border-white/10 p-4 rounded-t-2xl rounded-bl-2xl text-white">
-        <p className="text-sm font-medium">{content}</p>
-      </div>
-    </div>
-  );
-}
-
-function AiMessage({ content, insights }: { content: string; insights?: AiInsight[] }) {
+function EmptyState() {
   return (
     <div className="flex items-end gap-2">
       <div className="flex-shrink-0 w-20 h-24 self-end">
@@ -151,7 +131,6 @@ function AiMessage({ content, insights }: { content: string; insights?: AiInsigh
           style={{ mixBlendMode: 'screen' }}
         />
       </div>
-
       <div className="relative flex-1 bg-surface p-5 rounded-t-2xl rounded-br-2xl text-white">
         <span
           className="absolute bottom-5 -left-[9px] w-0 h-0"
@@ -172,17 +151,167 @@ function AiMessage({ content, insights }: { content: string; insights?: AiInsigh
             Genie
           </span>
         </div>
-        <p className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: content }} />
-        {insights && insights.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            {insights.map((insight) => (
-              <div key={insight.label} className="bg-background p-3 border-l-2 border-accent/50">
-                <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1">{insight.label}</p>
-                <p className="text-md font-bold text-accent">{insight.value}</p>
-              </div>
-            ))}
-          </div>
-        )}
+        <p className="text-sm leading-relaxed">Hi! How can I help you?</p>
+      </div>
+    </div>
+  );
+}
+
+function UserMessage({
+  parts,
+}: {
+  parts: Array<{ type: string; text?: string }>;
+}) {
+  const text = parts
+    .filter((p) => p.type === 'text')
+    .map((p) => p.text ?? '')
+    .join('');
+  return (
+    <div className="flex justify-end pl-12">
+      <div className="relative bg-surface border border-white/10 p-4 rounded-t-2xl rounded-bl-2xl text-white">
+        <span
+          className="absolute bottom-4 -right-[9px] w-0 h-0"
+          style={{
+            borderTop: '8px solid transparent',
+            borderBottom: '8px solid transparent',
+            borderLeft: '10px solid #171717',
+          }}
+        />
+        <p className="text-sm font-medium">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+function AiMessageBubble({
+  parts,
+}: {
+  parts: Array<{ type: string; text?: string }>;
+}) {
+  const textContent = parts
+    .filter((p) => p.type === 'text')
+    .map((p) => p.text ?? '')
+    .join('');
+  return (
+    <div className="flex items-end gap-2">
+      <div className="flex-shrink-0 w-20 h-24 self-end">
+        <img
+          src="/genie.png"
+          alt="Genie"
+          className="w-full h-full object-contain"
+          style={{ mixBlendMode: 'screen' }}
+        />
+      </div>
+      <div className="relative flex-1 bg-surface p-5 rounded-t-2xl rounded-br-2xl text-white">
+        <span
+          className="absolute bottom-5 -left-[9px] w-0 h-0"
+          style={{
+            borderTop: '8px solid transparent',
+            borderBottom: '8px solid transparent',
+            borderRight: '10px solid #171717',
+          }}
+        />
+        <div className="flex items-center gap-2 mb-3">
+          <span
+            className="material-symbols-outlined text-accent text-lg"
+            style={{ fontVariationSettings: "'FILL' 1" }}
+          >
+            auto_awesome
+          </span>
+          <span className="font-headline text-[10px] uppercase tracking-widest text-accent font-bold">
+            Genie
+          </span>
+        </div>
+        <div className="text-sm leading-relaxed prose-invert">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              p: ({ children }) => (
+                <p className="text-sm leading-relaxed mb-2 last:mb-0">
+                  {children}
+                </p>
+              ),
+              strong: ({ children }) => (
+                <strong className="font-bold text-white">{children}</strong>
+              ),
+              code: ({ children }) => (
+                <code className="bg-background px-1 text-accent text-xs font-mono">
+                  {children}
+                </code>
+              ),
+              pre: ({ children }) => (
+                <pre className="bg-background p-3 text-xs font-mono overflow-x-auto text-white/80 my-2">
+                  {children}
+                </pre>
+              ),
+              ul: ({ children }) => (
+                <ul className="list-disc list-inside text-sm space-y-1 my-2">
+                  {children}
+                </ul>
+              ),
+              ol: ({ children }) => (
+                <ol className="list-decimal list-inside text-sm space-y-1 my-2">
+                  {children}
+                </ol>
+              ),
+              a: ({ href, children }) => (
+                <a
+                  href={href}
+                  className="text-accent underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {children}
+                </a>
+              ),
+            }}
+          >
+            {textContent}
+          </ReactMarkdown>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function ErrorMessage({ error, onRetry }: { error: Error; onRetry: () => void }) {
+  return (
+    <div className="flex items-end gap-2">
+      <div className="flex-shrink-0 w-20 h-24 self-end">
+        <img
+          src="/genie.png"
+          alt="Genie"
+          className="w-full h-full object-contain"
+          style={{ mixBlendMode: 'screen' }}
+        />
+      </div>
+      <div className="relative flex-1 bg-surface p-5 rounded-t-2xl rounded-br-2xl text-white border border-red-500/30">
+        <span
+          className="absolute bottom-5 -left-[9px] w-0 h-0"
+          style={{
+            borderTop: '8px solid transparent',
+            borderBottom: '8px solid transparent',
+            borderRight: '10px solid #171717',
+          }}
+        />
+        <div className="flex items-center gap-2 mb-3">
+          <span className="material-symbols-outlined text-red-400 text-lg">
+            error
+          </span>
+          <span className="font-headline text-[10px] uppercase tracking-widest text-red-400 font-bold">
+            Error
+          </span>
+        </div>
+        <p className="text-sm text-white/70 mb-3">
+          Something went wrong. Please try again.
+        </p>
+        <button
+          onClick={onRetry}
+          className="px-4 py-2 bg-accent text-black text-xs font-bold uppercase tracking-widest active:scale-95 transition-transform"
+        >
+          Retry
+        </button>
       </div>
     </div>
   );
