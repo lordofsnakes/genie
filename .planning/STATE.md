@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 03-identity-03-02-PLAN.md
-last_updated: "2026-04-04T12:45:32.193Z"
+status: executing
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-04-04T15:21:19.247Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
+  completed_phases: 4
+  total_plans: 12
+  completed_plans: 12
   percent: 100
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** A single chat message can trigger a verified, human-backed financial transaction — send money, bridge USDC cross-chain, or plan savings — all inside World App with proof-of-human identity.
-**Current focus:** Phase 03 — identity
+**Current focus:** Phase 04 — financial-ops
 
 ## Current Position
 
-Phase: 4
+Phase: 5
 Plan: Not started
-Status: Phase complete — ready for verification
+Status: Ready to execute
 Last activity: 2026-04-04
 
 Progress: [████████████████████] 8/8 plans (100%)
@@ -60,6 +60,9 @@ Progress: [████████████████████] 8/8 pla
 | Phase 02-data-layer P04 | 3 | 2 tasks | 4 files |
 | Phase 03-identity P01 | 7 | 2 tasks | 7 files |
 | Phase 03-identity P02 | 79 | 2 tasks | 3 files |
+| Phase 04-financial-ops P03 | 15 | 2 tasks | 12 files |
+| Phase 04-financial-ops P04 | 2 | 1 tasks | 3 files |
+| Phase 04-financial-ops P04 | 15 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -92,6 +95,10 @@ Recent decisions affecting current work:
 - [Phase 03-identity]: invalidateContextCache called after successful verify — ensures isVerified propagates immediately without TTL delay
 - [Phase 03-identity]: requireVerified returns null for pass, structured VERIFICATION_REQUIRED error for fail — Phase 4/5 gated tools import and call this guard
 - [Phase 03-identity]: System prompt lists concrete gated actions (send money, debts, goals) and available actions so agent guides unverified users to World ID verify button
+- [Phase 04-financial-ops]: Static import for @genie/db in confirm.ts ensures vi.mock() intercepts correctly in tests
+- [Phase 04-financial-ops]: get_balance available to all users (ungated); resolve_contact and send_usdc require userId (DB + verification gate)
+- [Phase 04-financial-ops]: Export chain from clients.ts; pass explicit account + chain to writeContract -- viem 2.45 requires both for non-narrowed wallet client types
+- [Phase 04-financial-ops]: Deploy to World Chain (chain ID 4801) via forge script with broadcast
 
 ### Pending Todos
 
@@ -105,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T12:41:50.597Z
-Stopped at: Completed 03-identity-03-02-PLAN.md
+Last session: 2026-04-04T15:17:16.031Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
