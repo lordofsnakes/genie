@@ -35,9 +35,10 @@ export const ProfileInterface = () => {
 
   return (
     <div
-      className="flex flex-col bg-background text-white font-body overflow-y-auto pb-[108px]"
-      style={{ minHeight: '100dvh' }}
+      className="flex flex-col bg-background text-white font-body overflow-hidden touch-none"
+      style={{ height: '100dvh' }}
     >
+    <div className="flex-1 overflow-y-auto overscroll-contain pb-[108px]" style={{ touchAction: 'pan-y' }}>
       {/* ── Header ── */}
       <div className="px-6 pt-10 pb-6">
         <p className="font-headline text-[10px] uppercase tracking-[0.25em] text-white/40 mb-1">
@@ -130,6 +131,7 @@ export const ProfileInterface = () => {
           ))}
         </div>
       </Section>
+    </div>
     </div>
   );
 };

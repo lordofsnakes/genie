@@ -14,7 +14,8 @@ const GENIE_SUMMARY =
 
 export const DashboardInterface = () => {
   return (
-    <div className="flex flex-col bg-background text-white font-body overflow-y-auto pb-[108px]" style={{ minHeight: '100dvh' }}>
+    <div className="flex flex-col bg-background text-white font-body overflow-hidden touch-none" style={{ height: '100dvh' }}>
+    <div className="flex-1 overflow-y-auto overscroll-contain pb-[108px]" style={{ touchAction: 'pan-y' }}>
 
       {/* ── Header ── */}
       <div className="px-6 pt-10 pb-4">
@@ -126,6 +127,7 @@ export const DashboardInterface = () => {
         </div>
       </div>
 
+    </div>
     </div>
   );
 };
