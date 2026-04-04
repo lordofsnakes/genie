@@ -4,14 +4,13 @@ import { classifyIntent, selectModel } from './classifier';
 import { assembleContext, loadSystemPrompt, type UserContext } from './context';
 import { applyWindow } from './window';
 import { getBalanceTool } from '../tools/get-balance';
+import { PLANNING_MODEL, ACTION_MODEL } from './providers';
 
-// Load system prompt once at module init
-let systemPrompt: string;
-try {
-  systemPrompt = loadSystemPrompt();
-} catch {
-  systemPrompt = 'You are Genie, an AI personal accountant.';
-}
+const MAX_OUTPUT_TOKENS = parseInt(process.env.MAX_OUTPUT_TOKENS ?? '2048', 10);
+const WINDOW_LIMIT = parseInt(process.env.WINDOW_LIMIT ?? '40', 10);
+
+// Load system prompt once at module init — fail hard if missing
+const systemPrompt = loadSystemPrompt();
 
 export interface ChatRequest {
   messages: CoreMessage[];
@@ -41,7 +40,7 @@ export async function runAgent(request: ChatRequest) {
   // Step 2: Select model (D-03 — single model per request)
   const model = selectModel(intent);
   console.log(
-    `[agent] selected model: ${intent === 'action' ? 'DeepSeek V3' : 'GLM-5'}`,
+    `[agent] selected model: ${intent === 'action' ? ACTION_MODEL : PLANNING_MODEL}`,
   );
 
   // Step 3: Assemble three-layer context (AGEN-05)
@@ -57,7 +56,7 @@ export async function runAgent(request: ChatRequest) {
   const ctx = assembleContext(systemPrompt, stubUserContext, history, userMessage);
 
   // Step 4: Apply sliding window (AGEN-06)
-  const windowedMessages = applyWindow(ctx.messages, 40);
+  const windowedMessages = applyWindow(ctx.messages, WINDOW_LIMIT);
   console.log(
     `[agent] context assembled: ${windowedMessages.length} messages (windowed from ${ctx.messages.length})`,
   );
@@ -69,6 +68,7 @@ export async function runAgent(request: ChatRequest) {
     system: ctx.system,
     messages: windowedMessages,
     tools: { get_balance: getBalanceTool },
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
     stopWhen: stepCountIs(5),
     onStepFinish: ({ toolResults }) => {
       if (toolResults && toolResults.length > 0) {

@@ -18,7 +18,7 @@ export async function classifyIntent(userMessage: string): Promise<Intent> {
       model: deepseekV3,
       system: `You are a router. Classify the user's message as either "planning" (financial advice, summaries, goals, questions, greetings, general chat) or "action" (send money, check balance, resolve contacts, execute transfers, create debts). Respond with exactly one word: planning or action.`,
       prompt: userMessage,
-      maxTokens: 5,
+      maxOutputTokens: 5,
     });
     const label = text.trim().toLowerCase();
     return label === 'action' ? 'action' : 'planning'; // Default to planning per D-02
