@@ -112,5 +112,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 (backend). Phase 6 ru
 | 2. Data Layer | 4/4 | Complete   | 2026-04-04 |
 | 3. Identity | 1/2 | In Progress|  |
 | 4. Financial Ops | 0/? | Not started | - |
-| 5. Cross-Chain & Social | 0/? | Not started | - |
+| 5. Cross-Chain & Social | 2/3 | In Progress | - |
 | 6. Mini App Shell | 0/? | Not started | - |
