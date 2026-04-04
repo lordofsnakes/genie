@@ -4,6 +4,8 @@ import { classifyIntent, selectModel } from './classifier';
 import { assembleContext, loadSystemPrompt, type UserContext } from './context';
 import { applyWindow } from './window';
 import { getBalanceTool } from '../tools/get-balance';
+import { createUpdateMemoryTool } from '../tools/update-memory';
+import { DEFAULT_MEMORY } from '../kv/types';
 import { PLANNING_MODEL, ACTION_MODEL } from './providers';
 
 export type { UserContext };
@@ -54,6 +56,14 @@ export async function runAgent(request: ChatRequest) {
     autoApproveUsd: 25,
   };
 
+  // Create update_memory tool with current user's memory context
+  // Uses factory pattern — each request gets its own tool with userId + memory snapshot
+  // Only available when there is a userId (anonymous users cannot persist memory)
+  const currentMemory = resolvedUserContext.memory ?? { ...DEFAULT_MEMORY, updatedAt: new Date().toISOString() };
+  const updateMemoryTool = request.userId
+    ? createUpdateMemoryTool(request.userId, currentMemory)
+    : undefined;
+
   // Separate history from the current message
   const history = messages.slice(0, -1);
   const ctx = assembleContext(systemPrompt, resolvedUserContext, history, userMessage);
@@ -70,7 +80,10 @@ export async function runAgent(request: ChatRequest) {
     model,
     system: ctx.system,
     messages: windowedMessages,
-    tools: { get_balance: getBalanceTool },
+    tools: {
+      get_balance: getBalanceTool,
+      ...(updateMemoryTool ? { update_memory: updateMemoryTool } : {}),
+    },
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     stopWhen: stepCountIs(5),
     onStepFinish: ({ toolResults }) => {
