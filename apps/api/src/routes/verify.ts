@@ -1,0 +1,58 @@
+import { Hono } from 'hono';
+import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+import { db, users } from '../db';
+import { invalidateContextCache } from './chat';
+
+export const verifyRoute = new Hono();
+
+const proofSchema = z.object({
+  userId: z.string().uuid(),
+  proof: z.string(),
+  merkle_root: z.string(),
+  nullifier_hash: z.string(),
+  verification_level: z.enum(['orb', 'device']),
+});
+
+verifyRoute.post('/verify', async (c) => {
+  const body = await c.req.json();
+  const parsed = proofSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: 'INVALID_INPUT', message: 'Missing or invalid proof fields' }, 400);
+  }
+
+  const { userId, proof, merkle_root, nullifier_hash, verification_level } = parsed.data;
+
+  // D-04: Check if user exists and is not already verified
+  const [existing] = await db.select({ worldId: users.worldId }).from(users).where(eq(users.id, userId)).limit(1);
+  if (!existing) {
+    return c.json({ error: 'USER_NOT_FOUND' }, 404);
+  }
+  if (existing.worldId !== null) {
+    return c.json({ error: 'ALREADY_VERIFIED', message: 'This account is already verified with World ID' }, 409);
+  }
+
+  // D-02: Call World ID Cloud v2 API (developer.world.org per research)
+  const appId = process.env.WORLD_APP_ID!;
+  const action = process.env.WORLD_ACTION!;
+
+  const worldResponse = await fetch(`https://developer.world.org/api/v2/verify/${appId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nullifier_hash, merkle_root, proof, verification_level, action }),
+  });
+
+  if (!worldResponse.ok) {
+    const err = await worldResponse.json().catch(() => ({})) as { code?: string; detail?: string };
+    return c.json({ error: 'VERIFICATION_FAILED', code: err.code, detail: err.detail }, 400);
+  }
+
+  // D-03: Store nullifier_hash in users.worldId
+  await db.update(users).set({ worldId: nullifier_hash }).where(eq(users.id, userId));
+
+  // Pitfall 4: Invalidate context cache so isVerified updates immediately
+  invalidateContextCache(userId);
+
+  console.log(`[route:verify] user ${userId} verified with World ID`);
+  return c.json({ success: true });
+});

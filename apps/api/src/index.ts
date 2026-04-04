@@ -3,12 +3,14 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { serve } from '@hono/node-server';
 import { chatRoute } from './routes/chat';
+import { verifyRoute } from './routes/verify';
 
 const app = new Hono();
 app.use('*', cors());
 app.use('*', logger());
 app.get('/health', (c) => c.json({ status: 'ok', service: 'genie-api' }));
 app.route('/', chatRoute);
+app.route('/', verifyRoute);
 
 const port = parseInt(process.env.PORT ?? '3001', 10);
 
