@@ -20,8 +20,10 @@ export default function Home() {
     if (!isInstalled || hasAttemptedAuth.current) return;
     hasAttemptedAuth.current = true;
 
-    const destination = () =>
-      localStorage.getItem('genie_onboarding_done') ? '/home' : '/onboarding';
+    // TODO: switch to localStorage check once DB is hooked up
+    // const destination = () =>
+    //   localStorage.getItem('genie_onboarding_done') ? '/home' : '/onboarding';
+    const destination = () => '/onboarding';
 
     getSession().then((session) => {
       if (session) {

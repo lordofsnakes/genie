@@ -1,6 +1,8 @@
 'use client';
 
+import { AddFundsModal } from '@/components/AddFundsModal';
 import { ReceiveModal } from '@/components/ReceiveModal';
+import { SendModal } from '@/components/SendModal';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 
@@ -19,6 +21,8 @@ const GENIE_SUMMARY =
 export const DashboardInterface = () => {
   const { data: session } = useSession();
   const [showReceive, setShowReceive] = useState(false);
+  const [showSend, setShowSend] = useState(false);
+  const [showAddFunds, setShowAddFunds] = useState(false);
   const walletAddress = session?.user?.walletAddress ?? '';
 
   return (
@@ -29,7 +33,7 @@ export const DashboardInterface = () => {
       {/* ── Header ── */}
       <div className="px-6 pt-10 pb-4">
         <h1 className="font-headline text-2xl font-extrabold tracking-tighter text-white">
-          Dashboard
+          Home
         </h1>
       </div>
 
@@ -86,9 +90,9 @@ export const DashboardInterface = () => {
       {/* ── Quick actions ── */}
       <div className="px-6 mb-8 grid grid-cols-3 gap-3">
         {[
-          { label: 'Send', icon: 'north_east', onClick: undefined },
+          { label: 'Send', icon: 'north_east', onClick: () => setShowSend(true) },
           { label: 'Receive', icon: 'south_west', onClick: () => setShowReceive(true) },
-          { label: 'Add Funds', icon: 'add', onClick: undefined },
+          { label: 'Add Funds', icon: 'add', onClick: () => setShowAddFunds(true) },
         ].map(({ label, icon, onClick }) => (
           <button
             key={label}
@@ -133,8 +137,12 @@ export const DashboardInterface = () => {
 
     </div>
     </div>
+      {showSend && <SendModal onClose={() => setShowSend(false)} />}
       {showReceive && walletAddress && (
         <ReceiveModal address={walletAddress} onClose={() => setShowReceive(false)} />
+      )}
+      {showAddFunds && walletAddress && (
+        <AddFundsModal address={walletAddress} onClose={() => setShowAddFunds(false)} />
       )}
     </>
   );

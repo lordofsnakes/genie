@@ -14,17 +14,9 @@ const MOCK_OLD_TRANSACTIONS = [
 
 export const ProfileInterface = () => {
   // TODO: initialise from session / user API
-  const [displayName, setDisplayName] = useState('');
   const [spendingLimit, setSpendingLimit] = useState('');
   const [limitSaved, setLimitSaved] = useState(false);
-  const [nameSaved, setNameSaved] = useState(false);
-
-  const handleSaveName = () => {
-    if (!displayName.trim()) return;
-    // TODO: persist to user profile API
-    setNameSaved(true);
-    setTimeout(() => setNameSaved(false), 2000);
-  };
+  const [showAllTx, setShowAllTx] = useState(false);
 
   const handleSaveLimit = () => {
     const val = parseFloat(spendingLimit);
@@ -53,26 +45,6 @@ export const ProfileInterface = () => {
           Verify your humanity with World ID to unlock send money, debt tracking, and agent automation.
         </p>
         <Verify />
-      </Section>
-
-      {/* ── Display Name ── */}
-      <Section label="Your Name">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Enter your name"
-            className="flex-1 bg-transparent px-4 py-3 text-white placeholder:text-white/30 outline-none"
-            style={{ fontSize: '16px' }}
-          />
-          <button
-            onClick={handleSaveName}
-            className="px-5 bg-accent text-black font-headline font-extrabold text-xs uppercase tracking-widest active:scale-95 transition-transform"
-          >
-            {nameSaved ? 'Saved!' : 'Save'}
-          </button>
-        </div>
       </Section>
 
       {/* ── Agent Spending Limit ── */}
@@ -113,7 +85,7 @@ export const ProfileInterface = () => {
         <p className="text-xs text-white/40 mb-4">Full history of past activity.</p>
         {/* TODO: replace with paginated API results */}
         <div className="flex flex-col divide-y divide-white/5">
-          {MOCK_OLD_TRANSACTIONS.map((tx) => (
+          {(showAllTx ? MOCK_OLD_TRANSACTIONS : MOCK_OLD_TRANSACTIONS.slice(0, 4)).map((tx) => (
             <div key={tx.id} className="flex items-center justify-between py-4">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 bg-surface flex items-center justify-center flex-shrink-0">
@@ -136,6 +108,14 @@ export const ProfileInterface = () => {
             </div>
           ))}
         </div>
+        {MOCK_OLD_TRANSACTIONS.length > 4 && (
+          <button
+            onClick={() => setShowAllTx((v) => !v)}
+            className="mt-2 w-full py-3 text-[11px] font-headline font-bold uppercase tracking-widest text-accent/70 active:text-accent transition-colors"
+          >
+            {showAllTx ? 'Show Less' : `See All Transactions (${MOCK_OLD_TRANSACTIONS.length})`}
+          </button>
+        )}
       </Section>
     </div>
     </div>

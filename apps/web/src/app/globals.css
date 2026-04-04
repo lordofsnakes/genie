@@ -42,6 +42,21 @@ html.keyboard-open .nav-footer {
   display: none;
 }
 
+@keyframes onboarding-enter-forward {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes onboarding-enter-back {
+  from { opacity: 0; transform: translateX(-40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.onboarding-enter-forward {
+  animation: onboarding-enter-forward 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+.onboarding-enter-back {
+  animation: onboarding-enter-back 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
 .chat-bubble-tail {
   position: absolute;
   bottom: 0;

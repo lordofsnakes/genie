@@ -3,22 +3,20 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'react-qr-code';
 
-interface ReceiveModalProps {
+interface AddFundsModalProps {
   address: string;
   onClose: () => void;
 }
 
-export function ReceiveModal({ address, onClose }: ReceiveModalProps) {
-  const [copied, setCopied] = useState(false);
+export function AddFundsModal({ address, onClose }: AddFundsModalProps) {
   const [visible, setVisible] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // Trigger fade-in on mount
   useEffect(() => {
     const t = requestAnimationFrame(() => setVisible(true));
     return () => cancelAnimationFrame(t);
   }, []);
 
-  // Prevent background scroll
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
@@ -57,10 +55,10 @@ export function ReceiveModal({ address, onClose }: ReceiveModalProps) {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header row */}
+        {/* Header */}
         <div className="flex items-center justify-between w-full">
           <span className="font-headline text-[10px] uppercase tracking-widest text-white/40 font-bold">
-            Receive
+            Add Funds
           </span>
           <button
             onClick={handleClose}
@@ -71,12 +69,17 @@ export function ReceiveModal({ address, onClose }: ReceiveModalProps) {
           </button>
         </div>
 
+        {/* Instruction */}
+        <p className="text-xs text-white/40 text-center leading-relaxed w-full">
+          Send USDC to your wallet address below to add funds.
+        </p>
+
         {/* QR code */}
         <div className="bg-white p-3">
           <QRCode value={address} size={160} />
         </div>
 
-        {/* Wallet address + copy */}
+        {/* Address + copy */}
         <div className="w-full flex items-center gap-3 bg-background px-4 py-3">
           <p className="flex-1 text-sm text-white/80 font-mono truncate">{short}</p>
           <button
@@ -93,8 +96,8 @@ export function ReceiveModal({ address, onClose }: ReceiveModalProps) {
           </button>
         </div>
 
-        <p className="text-xs text-white/30 text-center">
-          Send only USDC or compatible tokens to this address
+        <p className="text-xs text-white/25 text-center">
+          Only send USDC or compatible tokens to this address.
         </p>
       </div>
     </div>

@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 const TABS = [
   {
@@ -43,11 +43,24 @@ const PATH_TO_TAB: Record<string, string> = {
 };
 
 export const Navigation = () => {
+  const router = useRouter();
   const pathname = usePathname();
   const activeTab = PATH_TO_TAB[pathname] ?? 'home';
   const activeIndex = TABS.findIndex((t) => t.value === activeTab);
+  const [pendingTab, setPendingTab] = useState<string | null>(null);
+
+  // Clear spinner once the route has settled to the destination
+  useEffect(() => {
+    setPendingTab(null);
+  }, [pathname]);
 
   const indicatorLeftPct = ((activeIndex * 2 + 1) / (TABS.length * 2)) * 100;
+
+  const handleTabPress = (tab: (typeof TABS)[number]) => {
+    if (tab.value === activeTab || pendingTab === tab.value) return;
+    setPendingTab(tab.value);
+    router.push(tab.route);
+  };
 
   return (
     <nav className="relative flex items-center w-full py-3">
@@ -62,25 +75,33 @@ export const Navigation = () => {
 
       {TABS.map((tab) => {
         const isActive = activeTab === tab.value;
+        const isLoading = pendingTab === tab.value;
+
         return (
-          <Link
+          <button
             key={tab.value}
-            href={tab.route}
-            prefetch={true}
+            onClick={() => handleTabPress(tab)}
             className="flex flex-col items-center justify-center gap-1 w-1/3 py-1 transition-all duration-150 active:scale-95"
             aria-label={tab.label}
           >
-            <span className={isActive ? 'text-[#CCFF00]' : 'text-white/40'}>
-              {tab.icon}
+            <span className={isActive || isLoading ? 'text-[#CCFF00]' : 'text-white/40'}>
+              {isLoading ? (
+                <span
+                  className="block w-5 h-5 rounded-full border-2 border-transparent animate-spin"
+                  style={{ borderTopColor: '#ccff00', borderRightColor: 'rgba(204,255,0,0.2)' }}
+                />
+              ) : (
+                tab.icon
+              )}
             </span>
             <span
               className={`text-[10px] font-bold uppercase tracking-widest transition-colors duration-200 ${
-                isActive ? 'text-[#CCFF00]' : 'text-white/40'
+                isActive || isLoading ? 'text-[#CCFF00]' : 'text-white/40'
               }`}
             >
               {tab.label}
             </span>
-          </Link>
+          </button>
         );
       })}
     </nav>

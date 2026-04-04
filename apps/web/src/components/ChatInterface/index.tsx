@@ -19,7 +19,7 @@ export interface AiInsight {
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 // Height of the bottom nav bar — input floats above it when keyboard is closed
-const NAV_HEIGHT = 108;
+const NAV_HEIGHT = 148;
 
 const PLACEHOLDERS = [
   'Go off.',
@@ -178,7 +178,7 @@ export const ChatInterface = () => {
     setInput(e.target.value);
     const el = e.target;
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 104)}px`;
   };
 
   return (
@@ -234,8 +234,8 @@ export const ChatInterface = () => {
               onChange={handleTextareaInput}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
-              className="flex-1 bg-transparent border-none focus:ring-0 px-4 py-2 placeholder:text-white/30 text-white outline-none resize-none overflow-hidden leading-relaxed"
-              style={{ maxHeight: '120px', fontSize: '16px' }}
+              className="flex-1 bg-transparent border-none focus:ring-0 px-4 py-2 placeholder:text-white/30 text-white outline-none resize-none overflow-y-auto leading-relaxed"
+              style={{ maxHeight: '104px', fontSize: '16px' }}
             />
             <button
               onClick={handleSend}
@@ -282,7 +282,7 @@ function EmptyState() {
             Genie
           </span>
         </div>
-        <p className="text-sm leading-relaxed">Hi! How can I help you?</p>
+        <p className="text-sm leading-relaxed">Hi, I&apos;m Genie, your personal Accountant Agent.</p>
       </div>
     </div>
   );
