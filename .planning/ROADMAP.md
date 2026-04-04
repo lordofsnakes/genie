@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Data Layer** - Supabase + Drizzle schemas, 0G Storage KV for agent memory (completed 2026-04-04)
 - [ ] **Phase 3: Identity** - World ID 4.0 verification and World Agent Kit classification
 - [ ] **Phase 4: Financial Ops** - Smart contracts, balance check, send USDC, contact resolution
-- [ ] **Phase 5: Cross-Chain & Social** - Arc CCTP deposits, spending tracking, debt management
+- [x] **Phase 5: Cross-Chain & Social** - Arc CCTP deposits, spending tracking, debt management (completed 2026-04-04)
 - [ ] **Phase 6: Mini App Shell** - Next.js Mini App, MiniKit 2.0, chat UI, streaming (parallel track)
 
 ## Phase Details
@@ -112,5 +112,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 (backend). Phase 6 ru
 | 2. Data Layer | 4/4 | Complete   | 2026-04-04 |
 | 3. Identity | 1/2 | In Progress|  |
 | 4. Financial Ops | 0/? | Not started | - |
-| 5. Cross-Chain & Social | 2/3 | In Progress | - |
+| 5. Cross-Chain & Social | 3/3 | Complete   | 2026-04-04 |
 | 6. Mini App Shell | 0/? | Not started | - |

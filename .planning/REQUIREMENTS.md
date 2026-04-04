@@ -36,14 +36,14 @@ Requirements for hackathon demo. Each maps to roadmap phases.
 
 ### Cross-Chain Deposits
 
-- [ ] **XCHD-01**: User can deposit USDC from Ethereum/Base/Arbitrum to World Chain via Arc CCTP
+- [x] **XCHD-01**: User can deposit USDC from Ethereum/Base/Arbitrum to World Chain via Arc CCTP
 
 ### Spending & Social
 
 - [ ] **SPND-01**: Agent categorizes transactions (food, transport, entertainment, bills, transfers)
 - [x] **SPND-02**: User can ask spending summaries ("how much did I spend this week?")
 - [x] **DEBT-01**: User can create debt entries ("Alice owes me $30 for dinner")
-- [ ] **DEBT-02**: Agent auto-detects incoming transfers and marks debts as settled
+- [x] **DEBT-02**: Agent auto-detects incoming transfers and marks debts as settled
 
 ### Mini App Shell
 
@@ -105,11 +105,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FOPS-04 | Phase 4 | Pending |
 | FOPS-05 | Phase 4 | Pending |
 | FOPS-06 | Phase 4 | Pending |
-| XCHD-01 | Phase 5 | Pending |
+| XCHD-01 | Phase 5 | Complete |
 | SPND-01 | Phase 5 | Pending |
 | SPND-02 | Phase 5 | Complete |
 | DEBT-01 | Phase 5 | Complete |
-| DEBT-02 | Phase 5 | Pending |
+| DEBT-02 | Phase 5 | Complete |
 | MAPP-01 | Phase 6 | Pending |
 | MAPP-02 | Phase 6 | Pending |
 | MAPP-03 | Phase 6 | Pending |
