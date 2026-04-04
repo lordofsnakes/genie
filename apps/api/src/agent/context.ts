@@ -8,6 +8,8 @@ export interface UserContext {
   displayName: string;
   autoApproveUsd: number;
   memory?: AgentMemory;
+  isVerified: boolean;
+  isHumanBacked: boolean;
 }
 
 /**
@@ -38,7 +40,11 @@ export function assembleContext(
   const memoryStr = userContext.memory
     ? `, goals=${userContext.memory.activeGoals.length}, profile=${JSON.stringify(userContext.memory.financialProfile)}`
     : '';
-  const contextInjection = `[User context: wallet=${userContext.walletAddress}, name=${userContext.displayName}, threshold=$${userContext.autoApproveUsd}${memoryStr}]`;
+  const verifiedStr = userContext.isVerified
+    ? ', verified=true'
+    : ', verified=false (gated actions unavailable — suggest World ID verification)';
+  const humanBackedStr = `, humanBacked=${userContext.isHumanBacked}`;
+  const contextInjection = `[User context: wallet=${userContext.walletAddress}, name=${userContext.displayName}, threshold=$${userContext.autoApproveUsd}${memoryStr}${verifiedStr}${humanBackedStr}]`;
 
   return {
     system: systemPrompt,

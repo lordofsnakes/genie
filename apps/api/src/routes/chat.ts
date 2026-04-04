@@ -52,6 +52,8 @@ async function fetchUserContext(userId: string): Promise<UserContext> {
       walletAddress: '0x0000000000000000000000000000000000000000',
       displayName: 'User',
       autoApproveUsd: 25,
+      isVerified: false,
+      isHumanBacked: false,
     };
   }
 
@@ -63,6 +65,8 @@ async function fetchUserContext(userId: string): Promise<UserContext> {
     displayName: user.displayName,
     autoApproveUsd: parseFloat(user.autoApproveUsd),
     memory: memory ?? undefined,
+    isVerified: user.worldId !== null,
+    isHumanBacked: user.worldId !== null,
   };
 
   // Cache it (D-08)

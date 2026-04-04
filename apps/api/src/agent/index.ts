@@ -54,6 +54,8 @@ export async function runAgent(request: ChatRequest) {
     walletAddress: '0x0000000000000000000000000000000000000000',
     displayName: 'User',
     autoApproveUsd: 25,
+    isVerified: false,
+    isHumanBacked: false,
   };
 
   // Create update_memory tool with current user's memory context
