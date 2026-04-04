@@ -62,7 +62,7 @@ Plans:
   4. World Agent Kit correctly labels agents acting on behalf of verified users as human-backed and all others as bot
 **Plans**: 2 plans
 Plans:
-- [ ] 03-01-PLAN.md — Verify endpoint + UserContext isVerified extension + cache invalidation
+- [x] 03-01-PLAN.md — Verify endpoint + UserContext isVerified extension + cache invalidation
 - [ ] 03-02-PLAN.md — Agent Kit classification, system prompt verification awareness, gating guard utility
 
 ### Phase 4: Financial Ops
@@ -110,7 +110,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 (backend). Phase 6 ru
 |-------|----------------|--------|-----------|
 | 1. Agent Infra | 2/2 | Complete   | 2026-04-04 |
 | 2. Data Layer | 4/4 | Complete   | 2026-04-04 |
-| 3. Identity | 0/2 | Planning complete | - |
+| 3. Identity | 1/2 | In Progress|  |
 | 4. Financial Ops | 0/? | Not started | - |
 | 5. Cross-Chain & Social | 0/? | Not started | - |
 | 6. Mini App Shell | 0/? | Not started | - |
