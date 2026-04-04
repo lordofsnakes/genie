@@ -158,6 +158,6 @@ Gap closure phases 7-9 run sequentially after all original phases.
 | 4. Financial Ops | 0/? | Not started | - |
 | 5. Cross-Chain & Social | 3/3 | Complete   | 2026-04-04 |
 | 6. Mini App Shell | 4/4 | Complete   | 2026-04-04 |
-| 7. API Wiring | 2/1 | Complete   | 2026-04-04 |
+| 7. API Wiring | 2/2 | Complete   | 2026-04-04 |
 | 8. Identity Wiring | 0/? | Not started | - |
 | 9. Confirmation Flow | 0/? | Not started | - |

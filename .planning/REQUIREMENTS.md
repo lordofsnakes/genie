@@ -102,7 +102,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FOPS-01 | Phase 7 | Pending |
 | FOPS-02 | Phase 7 | Pending |
 | FOPS-03 | Phase 7 | Pending |
-| FOPS-04 | Phase 7 | Pending |
+| FOPS-04 | Phase 7 | Complete |
 | FOPS-05 | Phase 9 | Pending |
 | FOPS-06 | Phase 4 | Complete |
 | XCHD-01 | Phase 5 | Deferred |

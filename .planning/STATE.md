@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 07-api-wiring-07-02-PLAN.md
-last_updated: "2026-04-04T23:15:50.684Z"
+stopped_at: Completed 07-api-wiring-07-03-PLAN.md
+last_updated: "2026-04-04T23:14:40.753Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 9
   completed_phases: 6
-  total_plans: 14
+  total_plans: 15
   completed_plans: 17
   percent: 100
 ---
@@ -67,7 +67,7 @@ Progress: [████████████████████] 8/8 pla
 | Phase 06-mini-app-shell P03 | 3 | 2 tasks | 2 files |
 | Phase 06-mini-app-shell P04 | 8 | 2 tasks | 5 files |
 | Phase 07 P01 | 4 | 4 tasks | 5 files |
-| Phase 07-api-wiring P02 | 8 | 2 tasks | 4 files |
+| Phase 07 P03 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -111,9 +111,8 @@ Recent decisions affecting current work:
 - [Phase 06-mini-app-shell]: add_contact tool has no verification gate -- saving contacts is ungated per plan spec
 - [Phase 07]: resolveUserId accepts 0x wallet addresses and UUIDs — wallet addresses trigger upsert, UUIDs pass through unchanged
 - [Phase 07]: verify route shares resolveUserId from chat module — single implementation for wallet-to-UUID resolution
-- [Phase 07-api-wiring]: POST /api/users/provision created as HTTP endpoint — resolveUserId() is internal only; provision endpoint is the public-facing contract
-- [Phase 07-api-wiring]: needsOnboarding = displayName.startsWith('0x') — wallet-derived name is proxy for no-real-name; avoids schema migration
-- [Phase 07-api-wiring]: next-auth/jwt module augmentation removed — v5 beta does not export it; JWT fields use as-casts
+- [Phase 07]: usersRoute reuses resolveUserId() from chat.ts — consistent wallet-to-UUID adapter across all routes
+- [Phase 07]: Onboarding API call is non-blocking — failure does not prevent users from accessing the app
 
 ### Pending Todos
 
@@ -127,6 +126,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T23:15:50.681Z
-Stopped at: Completed 07-api-wiring-07-02-PLAN.md
+Last session: 2026-04-04T23:14:40.749Z
+Stopped at: Completed 07-api-wiring-07-03-PLAN.md
 Resume file: None
