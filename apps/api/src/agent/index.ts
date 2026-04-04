@@ -7,6 +7,9 @@ import { createGetBalanceTool } from '../tools/get-balance';
 import { createResolveContactTool } from '../tools/resolve-contact';
 import { createSendUsdcTool } from '../tools/send-usdc';
 import { createUpdateMemoryTool } from '../tools/update-memory';
+import { createCreateDebtTool } from '../tools/create-debt';
+import { createListDebtsTool } from '../tools/list-debts';
+import { createGetSpendingTool } from '../tools/get-spending';
 import { DEFAULT_MEMORY } from '../kv/types';
 import { PLANNING_MODEL, ACTION_MODEL } from './providers';
 
@@ -22,6 +25,7 @@ export interface ChatRequest {
   messages: CoreMessage[];
   userId?: string;
   userContext?: UserContext;
+  settlementNotices?: Array<{ counterpartyWallet: string; amountUsd: string; description: string | null }>;
 }
 
 /**
@@ -80,9 +84,29 @@ export async function runAgent(request: ChatRequest) {
     ? createUpdateMemoryTool(request.userId, currentMemory)
     : undefined;
 
+  // Phase 5: Debt and spending tools
+  const createDebtTool = request.userId
+    ? createCreateDebtTool(request.userId, resolvedUserContext)
+    : undefined;
+  const listDebtsTool = request.userId
+    ? createListDebtsTool(request.userId, resolvedUserContext)
+    : undefined;
+  const getSpendingTool = request.userId
+    ? createGetSpendingTool(request.userId)
+    : undefined;
+
+  // Inject settlement notices into user message context (D-10)
+  let enrichedUserMessage = userMessage;
+  if (request.settlementNotices && request.settlementNotices.length > 0) {
+    const noticeStr = request.settlementNotices
+      .map(n => `${n.counterpartyWallet} sent $${n.amountUsd}${n.description ? ` (matched debt: ${n.description})` : ''} — auto-settled`)
+      .join('; ');
+    enrichedUserMessage = `[Settlement notices: ${noticeStr}]\n\n${userMessage}`;
+  }
+
   // Separate history from the current message
   const history = messages.slice(0, -1);
-  const ctx = assembleContext(systemPrompt, resolvedUserContext, history, userMessage);
+  const ctx = assembleContext(systemPrompt, resolvedUserContext, history, enrichedUserMessage);
 
   // Step 4: Apply sliding window (AGEN-06)
   const windowedMessages = applyWindow(ctx.messages, WINDOW_LIMIT);
@@ -101,6 +125,9 @@ export async function runAgent(request: ChatRequest) {
       ...(resolveContactTool ? { resolve_contact: resolveContactTool } : {}),
       ...(sendUsdcTool ? { send_usdc: sendUsdcTool } : {}),
       ...(updateMemoryTool ? { update_memory: updateMemoryTool } : {}),
+      ...(createDebtTool ? { create_debt: createDebtTool } : {}),
+      ...(listDebtsTool ? { list_debts: listDebtsTool } : {}),
+      ...(getSpendingTool ? { get_spending: getSpendingTool } : {}),
     },
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     stopWhen: stepCountIs(5),

@@ -3,6 +3,7 @@ import { runAgent } from '../agent/index';
 import { db, users, eq } from '@genie/db';
 import { readMemory } from '../kv';
 import type { UserContext } from '../agent/context';
+import { checkAndSettleDebts, type SettlementNotice } from '../agent/settlement';
 
 export const chatRoute = new Hono();
 
@@ -96,7 +97,20 @@ chatRoute.post('/chat', async (c) => {
     // Fetch user context if userId provided (D-10), otherwise use stub
     const userContext = userId ? await fetchUserContext(userId) : undefined;
 
-    const result = await runAgent({ messages, userId, userContext });
+    // Phase 5: Auto-settle debts from incoming transfers (DEBT-02, D-09, D-10)
+    let settlementNotices: SettlementNotice[] = [];
+    if (userId && userContext) {
+      try {
+        settlementNotices = await checkAndSettleDebts(userId, userContext.walletAddress);
+        if (settlementNotices.length > 0) {
+          console.log(`[route:chat] settled ${settlementNotices.length} debt(s) for user ${userId}`);
+        }
+      } catch (err) {
+        console.error('[route:chat] settlement check failed (continuing):', err);
+      }
+    }
+
+    const result = await runAgent({ messages, userId, userContext, settlementNotices });
 
     // CRITICAL: Use toUIMessageStreamResponse() NOT pipeDataStreamToResponse()
     // pipeDataStreamToResponse is Node.js-specific and crashes on Bun/Hono (Pitfall 3)
