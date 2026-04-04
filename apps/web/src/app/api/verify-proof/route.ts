@@ -1,3 +1,4 @@
+import { auth } from '@/auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface IRequestPayload {
@@ -32,8 +33,30 @@ export async function POST(req: NextRequest) {
   const verifyRes = (await response.json()) as IVerifyResponse;
 
   if (verifyRes.success) {
-    // This is where you should perform backend actions if the verification succeeds
-    // Such as, setting a user as "verified" in a database
+    // Persist verification to Genie backend (Phase 3 endpoint)
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? '';
+    if (apiUrl) {
+      try {
+        const nullifier_hash = (payload as Record<string, unknown>).nullifier_hash as string;
+        // Get userId from server-side session via NextAuth v5 auth()
+        const session = await auth();
+        const userId = session?.user?.id;
+
+        await fetch(`${apiUrl}/api/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nullifier_hash: nullifier_hash,
+            userId: userId,
+          }),
+        });
+        console.log('[verify-proof] persisted to Genie backend');
+      } catch (err) {
+        // Don't fail the verification if backend persistence fails
+        console.error('[verify-proof] failed to persist to Genie backend:', err);
+      }
+    }
+
     return NextResponse.json({ verifyRes, status: 200 });
   } else {
     // This is where you should handle errors from the World ID /verify endpoint.

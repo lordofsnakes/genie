@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Verify } from '../Verify';
 
 // TODO: replace with real data from API
 const MOCK_OLD_TRANSACTIONS = [
@@ -47,6 +48,14 @@ export const ProfileInterface = () => {
           Profile
         </h1>
       </div>
+
+      {/* ── Identity / World ID ── */}
+      <Section label="Identity">
+        <p className="text-xs text-white/40 mb-4 leading-relaxed">
+          Verify your humanity with World ID to unlock send money, debt tracking, and agent automation.
+        </p>
+        <Verify />
+      </Section>
 
       {/* ── Display Name ── */}
       <Section label="Your Name">
