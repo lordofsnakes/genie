@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Agent Infra** - 0G Compute Adapter + Vercel AI SDK loop with dual-model routing (completed 2026-04-04)
 - [x] **Phase 2: Data Layer** - Supabase + Drizzle schemas, 0G Storage KV for agent memory (completed 2026-04-04)
 - [ ] **Phase 3: Identity** - World ID 4.0 verification and World Agent Kit classification
-- [x] **Phase 4: Financial Ops** - Smart contracts, balance check, send USDC, contact resolution (completed 2026-04-04)
+- [ ] **Phase 4: Financial Ops** - Smart contracts, balance check, send USDC, contact resolution
 - [ ] **Phase 5: Cross-Chain & Social** - Arc CCTP deposits, spending tracking, debt management
 - [ ] **Phase 6: Mini App Shell** - Next.js Mini App, MiniKit 2.0, chat UI, streaming (parallel track)
 
@@ -75,28 +75,19 @@ Plans:
   3. Transfers under the auto-approve threshold execute immediately without a confirmation step
   4. Transfers over the threshold pause and ask the user to confirm before executing
   5. GenieRouter and PayHandler contracts are deployed on World Chain and the API routes transfers through them
-**Plans**: 4 plans
-Plans:
-- [x] 04-01-PLAN.md — Foundry contracts (GenieRouter + PayHandler), schema migration, viem clients
-- [x] 04-02-PLAN.md — Financial tools (get_balance, resolve_contact, send_usdc) + transfer module
-- [x] 04-03-PLAN.md — Confirm endpoint and agent tool registration
-- [x] 04-04-PLAN.md — Gap closure: fix transfer.ts TS errors, deploy contracts, set env vars
+**Plans**: TBD
 
 ### Phase 5: Cross-Chain & Social
-**Goal**: Users can track spending and debts via natural language — transactions are auto-categorized, spending summaries are queryable, and debts auto-settle on incoming transfers (XCHD-01 cross-chain deposits deferred)
+**Goal**: Users can deposit USDC from other chains and track spending and debts via natural language
 **Depends on**: Phase 4
 **Requirements**: XCHD-01, SPND-01, SPND-02, DEBT-01, DEBT-02
 **Success Criteria** (what must be TRUE):
-  1. ~~User can initiate a USDC deposit from Ethereum, Base, or Arbitrum and it arrives on World Chain via Arc CCTP~~ DEFERRED (XCHD-01)
+  1. User can initiate a USDC deposit from Ethereum, Base, or Arbitrum and it arrives on World Chain via Arc CCTP
   2. Agent automatically categorizes each transaction into food, transport, entertainment, bills, or transfers
   3. User can ask "how much did I spend on food this week?" and receive an accurate summary
   4. User can say "Alice owes me $30 for dinner" and the debt is recorded and retrievable
   5. When an incoming transfer matches an open debt, the agent automatically marks it as settled
-**Plans**: 3 plans
-Plans:
-- [x] 05-01-PLAN.md — Schema extension (category, source, iOwe), inferCategory function, send_usdc integration
-- [ ] 05-02-PLAN.md — Debt tools (create_debt, list_debts) and get_spending tool
-- [ ] 05-03-PLAN.md — Settlement detection, tool registration, system prompt update, chat route wiring
+**Plans**: TBD
 
 ### Phase 6: Mini App Shell
 **Goal**: The frontend Mini App runs inside World App with a working chat interface, streaming responses, and contact management
@@ -119,7 +110,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 (backend). Phase 6 ru
 |-------|----------------|--------|-----------|
 | 1. Agent Infra | 2/2 | Complete   | 2026-04-04 |
 | 2. Data Layer | 4/4 | Complete   | 2026-04-04 |
-| 3. Identity | 2/2 | Complete   | 2026-04-04 |
-| 4. Financial Ops | 4/4 | Complete   | 2026-04-04 |
-| 5. Cross-Chain & Social | 1/3 | In Progress|  |
+| 3. Identity | 1/2 | In Progress|  |
+| 4. Financial Ops | 0/? | Not started | - |
+| 5. Cross-Chain & Social | 2/3 | In Progress | - |
 | 6. Mini App Shell | 0/? | Not started | - |

@@ -27,12 +27,12 @@ Requirements for hackathon demo. Each maps to roadmap phases.
 
 ### Financial Operations
 
-- [x] **FOPS-01**: User can check USDC balance on World Chain via chat
-- [x] **FOPS-02**: User can send USDC to contacts/addresses via natural language
-- [x] **FOPS-03**: Agent resolves recipients via contacts, ENS, or wallet address
-- [x] **FOPS-04**: Transfers under auto-approve threshold execute immediately
-- [x] **FOPS-05**: Transfers over threshold require explicit confirmation
-- [x] **FOPS-06**: GenieRouter + PayHandler smart contracts handle transfers on World Chain
+- [ ] **FOPS-01**: User can check USDC balance on World Chain via chat
+- [ ] **FOPS-02**: User can send USDC to contacts/addresses via natural language
+- [ ] **FOPS-03**: Agent resolves recipients via contacts, ENS, or wallet address
+- [ ] **FOPS-04**: Transfers under auto-approve threshold execute immediately
+- [ ] **FOPS-05**: Transfers over threshold require explicit confirmation
+- [ ] **FOPS-06**: GenieRouter + PayHandler smart contracts handle transfers on World Chain
 
 ### Cross-Chain Deposits
 
@@ -40,9 +40,9 @@ Requirements for hackathon demo. Each maps to roadmap phases.
 
 ### Spending & Social
 
-- [x] **SPND-01**: Agent categorizes transactions (food, transport, entertainment, bills, transfers)
-- [ ] **SPND-02**: User can ask spending summaries ("how much did I spend this week?")
-- [ ] **DEBT-01**: User can create debt entries ("Alice owes me $30 for dinner")
+- [ ] **SPND-01**: Agent categorizes transactions (food, transport, entertainment, bills, transfers)
+- [x] **SPND-02**: User can ask spending summaries ("how much did I spend this week?")
+- [x] **DEBT-01**: User can create debt entries ("Alice owes me $30 for dinner")
 - [ ] **DEBT-02**: Agent auto-detects incoming transfers and marks debts as settled
 
 ### Mini App Shell
@@ -99,16 +99,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WRID-03 | Phase 3 | Complete |
 | WRID-04 | Phase 3 | Complete |
 | WRID-05 | Phase 3 | Complete |
-| FOPS-01 | Phase 4 | Complete |
-| FOPS-02 | Phase 4 | Complete |
-| FOPS-03 | Phase 4 | Complete |
-| FOPS-04 | Phase 4 | Complete |
-| FOPS-05 | Phase 4 | Complete |
-| FOPS-06 | Phase 4 | Complete |
+| FOPS-01 | Phase 4 | Pending |
+| FOPS-02 | Phase 4 | Pending |
+| FOPS-03 | Phase 4 | Pending |
+| FOPS-04 | Phase 4 | Pending |
+| FOPS-05 | Phase 4 | Pending |
+| FOPS-06 | Phase 4 | Pending |
 | XCHD-01 | Phase 5 | Pending |
-| SPND-01 | Phase 5 | Complete |
-| SPND-02 | Phase 5 | Pending |
-| DEBT-01 | Phase 5 | Pending |
+| SPND-01 | Phase 5 | Pending |
+| SPND-02 | Phase 5 | Complete |
+| DEBT-01 | Phase 5 | Complete |
 | DEBT-02 | Phase 5 | Pending |
 | MAPP-01 | Phase 6 | Pending |
 | MAPP-02 | Phase 6 | Pending |
