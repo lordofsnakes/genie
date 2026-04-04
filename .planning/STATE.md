@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 03-identity-03-02-PLAN.md
-last_updated: "2026-04-04T12:45:32.193Z"
+stopped_at: Completed 06-mini-app-shell-06-01-PLAN.md
+last_updated: "2026-04-04T19:46:29.017Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 5
   percent: 100
 ---
 
@@ -60,6 +60,7 @@ Progress: [████████████████████] 8/8 pla
 | Phase 02-data-layer P04 | 3 | 2 tasks | 4 files |
 | Phase 03-identity P01 | 7 | 2 tasks | 7 files |
 | Phase 03-identity P02 | 79 | 2 tasks | 3 files |
+| Phase 06-mini-app-shell P01 | 415 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,8 @@ Recent decisions affecting current work:
 - [Phase 03-identity]: invalidateContextCache called after successful verify — ensures isVerified propagates immediately without TTL delay
 - [Phase 03-identity]: requireVerified returns null for pass, structured VERIFICATION_REQUIRED error for fail — Phase 4/5 gated tools import and call this guard
 - [Phase 03-identity]: System prompt lists concrete gated actions (send money, debts, goals) and available actions so agent guides unverified users to World ID verify button
+- [Phase 06-mini-app-shell]: useChat v5 requires DefaultChatTransport({ api }) passed via transport option — no direct api string param
+- [Phase 06-mini-app-shell]: sendMessage({ text }, { body: { userId } }) passes per-request body to avoid stale session capture
 
 ### Pending Todos
 
@@ -105,6 +108,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T12:41:50.597Z
-Stopped at: Completed 03-identity-03-02-PLAN.md
+Last session: 2026-04-04T19:46:29.014Z
+Stopped at: Completed 06-mini-app-shell-06-01-PLAN.md
 Resume file: None
