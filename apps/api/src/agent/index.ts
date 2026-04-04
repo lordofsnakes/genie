@@ -10,6 +10,8 @@ import { createUpdateMemoryTool } from '../tools/update-memory';
 import { createCreateDebtTool } from '../tools/create-debt';
 import { createListDebtsTool } from '../tools/list-debts';
 import { createGetSpendingTool } from '../tools/get-spending';
+import { createAddContactTool } from '../tools/add-contact';
+import { createListContactsTool } from '../tools/list-contacts';
 import { DEFAULT_MEMORY } from '../kv/types';
 import { PLANNING_MODEL, ACTION_MODEL } from './providers';
 
@@ -94,6 +96,12 @@ export async function runAgent(request: ChatRequest) {
   const getSpendingTool = request.userId
     ? createGetSpendingTool(request.userId)
     : undefined;
+  const addContactTool = request.userId
+    ? createAddContactTool(request.userId)
+    : undefined;
+  const listContactsTool = request.userId
+    ? createListContactsTool(request.userId)
+    : undefined;
 
   // Inject settlement notices into user message context (D-10)
   let enrichedUserMessage = userMessage;
@@ -128,6 +136,8 @@ export async function runAgent(request: ChatRequest) {
       ...(createDebtTool ? { create_debt: createDebtTool } : {}),
       ...(listDebtsTool ? { list_debts: listDebtsTool } : {}),
       ...(getSpendingTool ? { get_spending: getSpendingTool } : {}),
+      ...(addContactTool ? { add_contact: addContactTool } : {}),
+      ...(listContactsTool ? { list_contacts: listContactsTool } : {}),
     },
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     stopWhen: stepCountIs(5),

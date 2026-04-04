@@ -134,7 +134,17 @@ export const ChatInterface = () => {
             message.role === 'user' ? (
               <UserMessage key={message.id} parts={message.parts} />
             ) : (
-              <AiMessageBubble key={message.id} parts={message.parts} />
+              <AiMessageBubble
+                key={message.id}
+                parts={message.parts}
+                onContactSelect={(contact: ContactData) => {
+                  if (status !== 'ready') return;
+                  sendMessage(
+                    { text: `Use contact ${contact.name} at wallet ${contact.walletAddress}` },
+                    { body: { userId: session?.user?.id } },
+                  );
+                }}
+              />
             ),
           )}
           {isThinking && <ThinkingIndicator />}
@@ -236,8 +246,10 @@ function UserMessage({
 
 function AiMessageBubble({
   parts,
+  onContactSelect,
 }: {
   parts: Array<{ type: string; text?: string }>;
+  onContactSelect: (contact: ContactData) => void;
 }) {
   const textContent = parts
     .filter((p) => p.type === 'text')
@@ -247,8 +259,7 @@ function AiMessageBubble({
   const contactData = parseContactList(textContent);
 
   const handleContactSelect = (contact: ContactData) => {
-    // For hackathon: log selection. In production, this would feed back into sendMessage.
-    console.log('[contact-select]', contact.name, contact.walletAddress);
+    onContactSelect(contact);
   };
 
   // Strip the JSON fence from rendered markdown if contacts detected
