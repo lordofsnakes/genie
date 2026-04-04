@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 05-cross-chain-social-05-02-PLAN.md
-last_updated: "2026-04-04T17:38:00Z"
-last_activity: 2026-04-04
+status: executing
+stopped_at: Phase 5 context gathered
+last_updated: "2026-04-04T17:24:51.111Z"
+last_activity: 2026-04-04 -- Phase 05 execution started
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
+  completed_phases: 4
+  total_plans: 15
+  completed_plans: 12
   percent: 100
 ---
 
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 
 ## Current Position
 
-Phase: 5
-Plan: 2 (completed)
-Status: Plan 05-02 complete
-Last activity: 2026-04-04
+Phase: 05 (cross-chain-social) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 05
+Last activity: 2026-04-04 -- Phase 05 execution started
 
 Progress: [████████████████████] 8/8 plans (100%)
 
@@ -60,6 +60,9 @@ Progress: [████████████████████] 8/8 pla
 | Phase 02-data-layer P04 | 3 | 2 tasks | 4 files |
 | Phase 03-identity P01 | 7 | 2 tasks | 7 files |
 | Phase 03-identity P02 | 79 | 2 tasks | 3 files |
+| Phase 04-financial-ops P03 | 15 | 2 tasks | 12 files |
+| Phase 04-financial-ops P04 | 2 | 1 tasks | 3 files |
+| Phase 04-financial-ops P04 | 15 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -92,9 +95,10 @@ Recent decisions affecting current work:
 - [Phase 03-identity]: invalidateContextCache called after successful verify — ensures isVerified propagates immediately without TTL delay
 - [Phase 03-identity]: requireVerified returns null for pass, structured VERIFICATION_REQUIRED error for fail — Phase 4/5 gated tools import and call this guard
 - [Phase 03-identity]: System prompt lists concrete gated actions (send money, debts, goals) and available actions so agent guides unverified users to World ID verify button
-- [Phase 05-cross-chain-social]: get_spending is not verification-gated — viewing spending summaries is ungated (same policy as get_balance)
-- [Phase 05-cross-chain-social]: iOwe direction flag uses boolean matching DB schema — mapped to human-readable 'I owe them' / 'they owe me' in tool response
-- [Phase 05-cross-chain-social]: COALESCE(category, 'transfers') SQL pattern ensures null categories aggregate correctly, consistent with inferCategory default
+- [Phase 04-financial-ops]: Static import for @genie/db in confirm.ts ensures vi.mock() intercepts correctly in tests
+- [Phase 04-financial-ops]: get_balance available to all users (ungated); resolve_contact and send_usdc require userId (DB + verification gate)
+- [Phase 04-financial-ops]: Export chain from clients.ts; pass explicit account + chain to writeContract -- viem 2.45 requires both for non-narrowed wallet client types
+- [Phase 04-financial-ops]: Deploy to World Chain (chain ID 4801) via forge script with broadcast
 
 ### Pending Todos
 
@@ -108,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T17:38:00.000Z
-Stopped at: Completed 05-cross-chain-social-05-02-PLAN.md
-Resume file: None
+Last session: 2026-04-04T17:05:59.299Z
+Stopped at: Phase 5 context gathered
+Resume file: .planning/phases/05-cross-chain-social/05-CONTEXT.md
