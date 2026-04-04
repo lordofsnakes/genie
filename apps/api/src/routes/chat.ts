@@ -27,6 +27,12 @@ function getCachedContext(userId: string): UserContext | null {
   return entry.userContext;
 }
 
+/** Invalidate cached context for a user so next fetch reloads from DB + KV. Called by update_memory tool after KV write. */
+export function invalidateContextCache(userId: string): void {
+  contextCache.delete(userId);
+  console.log(`[route:chat] context cache invalidated for user ${userId}`);
+}
+
 async function fetchUserContext(userId: string): Promise<UserContext> {
   // Check cache first (D-10)
   const cached = getCachedContext(userId);
