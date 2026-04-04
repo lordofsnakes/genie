@@ -11,6 +11,9 @@ export default defineConfig({
       OG_ACTION_MODEL: 'test-action-model',
       OG_KV_CLIENT_URL: 'http://localhost:6789',
       OG_KV_STREAM_ID: '0xtest-stream-id',
+      RELAYER_PRIVATE_KEY: '0x0000000000000000000000000000000000000000000000000000000000000001',
+      WORLD_CHAIN_RPC_URL: 'http://localhost:8545',
+      WORLD_CHAIN_TESTNET: 'true',
     },
   },
 });
