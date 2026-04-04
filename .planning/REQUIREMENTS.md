@@ -40,7 +40,7 @@ Requirements for hackathon demo. Each maps to roadmap phases.
 
 ### Spending & Social
 
-- [ ] **SPND-01**: Agent categorizes transactions (food, transport, entertainment, bills, transfers)
+- [x] **SPND-01**: Agent categorizes transactions (food, transport, entertainment, bills, transfers)
 - [ ] **SPND-02**: User can ask spending summaries ("how much did I spend this week?")
 - [ ] **DEBT-01**: User can create debt entries ("Alice owes me $30 for dinner")
 - [ ] **DEBT-02**: Agent auto-detects incoming transfers and marks debts as settled
@@ -106,7 +106,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FOPS-05 | Phase 4 | Complete |
 | FOPS-06 | Phase 4 | Complete |
 | XCHD-01 | Phase 5 | Pending |
-| SPND-01 | Phase 5 | Pending |
+| SPND-01 | Phase 5 | Complete |
 | SPND-02 | Phase 5 | Pending |
 | DEBT-01 | Phase 5 | Pending |
 | DEBT-02 | Phase 5 | Pending |

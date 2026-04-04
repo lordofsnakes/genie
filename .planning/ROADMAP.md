@@ -94,7 +94,7 @@ Plans:
   5. When an incoming transfer matches an open debt, the agent automatically marks it as settled
 **Plans**: 3 plans
 Plans:
-- [ ] 05-01-PLAN.md — Schema extension (category, source, iOwe), inferCategory function, send_usdc integration
+- [x] 05-01-PLAN.md — Schema extension (category, source, iOwe), inferCategory function, send_usdc integration
 - [ ] 05-02-PLAN.md — Debt tools (create_debt, list_debts) and get_spending tool
 - [ ] 05-03-PLAN.md — Settlement detection, tool registration, system prompt update, chat route wiring
 
@@ -121,5 +121,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 (backend). Phase 6 ru
 | 2. Data Layer | 4/4 | Complete   | 2026-04-04 |
 | 3. Identity | 2/2 | Complete   | 2026-04-04 |
 | 4. Financial Ops | 4/4 | Complete   | 2026-04-04 |
-| 5. Cross-Chain & Social | 0/3 | Not started | - |
+| 5. Cross-Chain & Social | 1/3 | In Progress|  |
 | 6. Mini App Shell | 0/? | Not started | - |
