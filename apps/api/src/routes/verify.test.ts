@@ -4,19 +4,23 @@ import { Hono } from 'hono';
 // Mock DB
 const mockSelect = vi.fn();
 const mockSet = vi.fn();
-vi.mock('../db', () => ({
-  db: {
-    select: () => ({
-      from: () => ({
-        where: () => ({
-          limit: () => mockSelect(),
+vi.mock('@genie/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@genie/db')>();
+  return {
+    ...actual,
+    db: {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: () => mockSelect(),
+          }),
         }),
       }),
-    }),
-    update: () => ({ set: mockSet }),
-  },
-  users: {},
-}));
+      update: () => ({ set: mockSet }),
+    },
+    users: {},
+  };
+});
 
 // Mock chat cache invalidation
 const mockInvalidate = vi.fn();

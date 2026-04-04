@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
-import { eq } from 'drizzle-orm';
 import { runAgent } from '../agent/index';
-import { db, users } from '../db';
+import { db, users, eq } from '@genie/db';
 import { readMemory } from '../kv';
 import type { UserContext } from '../agent/context';
 

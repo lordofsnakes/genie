@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
-import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { db, users } from '../db';
+import { db, users, eq } from '@genie/db';
 import { invalidateContextCache } from './chat';
 
 export const verifyRoute = new Hono();
