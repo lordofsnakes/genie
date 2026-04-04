@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   const app_id = process.env.NEXT_PUBLIC_APP_ID as `app_${string}`;
 
   const response = await fetch(
-    `https://developer.worldcoin.org/api/v2/verify/${app_id}`,
+    `${process.env.WORLD_VERIFY_API_URL ?? 'https://developer.worldcoin.org/api/v2/verify'}/${app_id}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -1,8 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { db, contacts, eq } from '@genie/db';
-
-const WORLD_USERNAME_API = 'https://usernames.worldcoin.org/api/v1';
+import { WORLD_USERNAME_API_URL } from '../config/env';
 
 /**
  * Resolves a World username to a wallet address via the World Username API.
@@ -10,7 +9,7 @@ const WORLD_USERNAME_API = 'https://usernames.worldcoin.org/api/v1';
  */
 async function resolveWorldUsername(name: string): Promise<string | null> {
   try {
-    const res = await fetch(`${WORLD_USERNAME_API}/${encodeURIComponent(name)}`);
+    const res = await fetch(`${WORLD_USERNAME_API_URL}/${encodeURIComponent(name)}`);
     if (!res.ok) return null;
     const data = (await res.json()) as { address?: string };
     return data.address ?? null;

@@ -1,14 +1,23 @@
 import { createPublicClient, createWalletClient, http } from 'viem';
 import { worldchain, worldchainSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
+import {
+  WORLD_CHAIN_RPC_URL,
+  WORLD_CHAIN_TESTNET,
+  RELAYER_PRIVATE_KEY,
+  GENIE_ROUTER_ADDRESS,
+  PAY_HANDLER_ADDRESS,
+  USDC_ADDRESS_TESTNET,
+  USDC_ADDRESS_MAINNET,
+} from '../config/env';
 
-const isTestnet = process.env.WORLD_CHAIN_TESTNET === 'true';
-export const chain = isTestnet ? worldchainSepolia : worldchain;
-const rpcUrl = process.env.WORLD_CHAIN_RPC_URL;
+export { GENIE_ROUTER_ADDRESS, PAY_HANDLER_ADDRESS };
+
+export const chain = WORLD_CHAIN_TESTNET ? worldchainSepolia : worldchain;
 
 export const publicClient = createPublicClient({
   chain,
-  transport: http(rpcUrl),
+  transport: http(WORLD_CHAIN_RPC_URL),
 });
 
 // Lazy-init wallet client to avoid crash when RELAYER_PRIVATE_KEY not set (e.g., in tests importing this module indirectly)
@@ -17,7 +26,7 @@ let _relayerAccount: ReturnType<typeof privateKeyToAccount> | null = null;
 
 function getRelayerAccountInstance() {
   if (!_relayerAccount) {
-    const key = process.env.RELAYER_PRIVATE_KEY;
+    const key = RELAYER_PRIVATE_KEY;
     if (!key) throw new Error('RELAYER_PRIVATE_KEY env var is required for wallet operations');
     _relayerAccount = privateKeyToAccount(key as `0x${string}`);
   }
@@ -29,7 +38,7 @@ export function getWalletClient() {
     _walletClient = createWalletClient({
       account: getRelayerAccountInstance(),
       chain,
-      transport: http(rpcUrl),
+      transport: http(WORLD_CHAIN_RPC_URL),
     });
   }
   return _walletClient;
@@ -40,10 +49,6 @@ export function relayerAccount() {
 }
 
 // USDC contract addresses (verified from WorldScan and docs.world.org)
-export const USDC_ADDRESS: `0x${string}` = isTestnet
-  ? '0x66145f38cBAC35Ca6F1Dfb4914dF98F1614aeA88'
-  : '0x79A02482A880bCE3F13e09Da970dC34db4CD24d1';
-
-// Contract addresses — set after deployment via env vars
-export const GENIE_ROUTER_ADDRESS = (process.env.GENIE_ROUTER_ADDRESS ?? '0x0000000000000000000000000000000000000000') as `0x${string}`;
-export const PAY_HANDLER_ADDRESS = (process.env.PAY_HANDLER_ADDRESS ?? '0x0000000000000000000000000000000000000000') as `0x${string}`;
+export const USDC_ADDRESS: `0x${string}` = (
+  WORLD_CHAIN_TESTNET ? USDC_ADDRESS_TESTNET : USDC_ADDRESS_MAINNET
+) as `0x${string}`;

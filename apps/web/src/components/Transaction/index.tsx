@@ -19,7 +19,7 @@ import { worldchain } from 'viem/chains';
  */
 export const Transaction = () => {
   // See the code for this contract here: https://worldscan.org/address/0xF0882554ee924278806d708396F1a7975b732522#code
-  const myContractToken = '0xF0882554ee924278806d708396F1a7975b732522';
+  const myContractToken = process.env.NEXT_PUBLIC_TEST_CONTRACT_ADDRESS!;
   const [buttonState, setButtonState] = useState<
     'pending' | 'success' | 'failed' | undefined
   >(undefined);
@@ -30,7 +30,7 @@ export const Transaction = () => {
   // Feel free to use your own RPC provider for better performance
   const client = createPublicClient({
     chain: worldchain,
-    transport: http('https://worldchain-mainnet.g.alchemy.com/public'),
+    transport: http(process.env.NEXT_PUBLIC_WORLD_CHAIN_RPC_URL!),
   });
 
   const { poll, isLoading } = useUserOperationReceipt({ client });

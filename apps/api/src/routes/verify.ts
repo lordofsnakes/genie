@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { db, users, eq } from '@genie/db';
 import { invalidateContextCache } from './chat';
+import { WORLD_APP_ID, WORLD_ACTION, WORLD_VERIFY_API_URL } from '../config/env';
 
 export const verifyRoute = new Hono();
 
@@ -32,13 +33,10 @@ verifyRoute.post('/verify', async (c) => {
   }
 
   // D-02: Call World ID Cloud v2 API (developer.world.org per research)
-  const appId = process.env.WORLD_APP_ID!;
-  const action = process.env.WORLD_ACTION!;
-
-  const worldResponse = await fetch(`https://developer.world.org/api/v2/verify/${appId}`, {
+  const worldResponse = await fetch(`${WORLD_VERIFY_API_URL}/${WORLD_APP_ID}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nullifier_hash, merkle_root, proof, verification_level, action }),
+    body: JSON.stringify({ nullifier_hash, merkle_root, proof, verification_level, action: WORLD_ACTION }),
   });
 
   if (!worldResponse.ok) {

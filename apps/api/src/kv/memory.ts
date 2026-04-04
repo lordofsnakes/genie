@@ -1,5 +1,6 @@
 import { createKvReader, createKvWriter } from './client';
 import { type AgentMemory, encodeKvKey, decodeKvValue } from './types';
+import { OG_KV_STREAM_ID } from '../config/env';
 
 /**
  * Read agent memory from 0G KV. Returns null if KV is unavailable or key not found.
@@ -10,7 +11,7 @@ export async function readMemory(userId: string): Promise<AgentMemory | null> {
     const kvClient = createKvReader();
     if (!kvClient) return null;
 
-    const streamId = process.env.OG_KV_STREAM_ID;
+    const streamId = OG_KV_STREAM_ID;
     if (!streamId) return null;
 
     const key = `user:${userId}:memory`;

@@ -5,6 +5,7 @@ import { serve } from '@hono/node-server';
 import { chatRoute } from './routes/chat';
 import { verifyRoute } from './routes/verify';
 import { confirmRoute } from './routes/confirm';
+import { PORT } from './config/env';
 
 const app = new Hono();
 app.use('*', cors());
@@ -14,9 +15,7 @@ app.route('/', chatRoute);
 app.route('/', verifyRoute);
 app.route('/', confirmRoute);
 
-const port = parseInt(process.env.PORT ?? '3001', 10);
-
-serve({ fetch: app.fetch, port });
-console.log(`[genie-api] listening on http://localhost:${port}`);
+serve({ fetch: app.fetch, port: PORT });
+console.log(`[genie-api] listening on http://localhost:${PORT}`);
 
 export { app };

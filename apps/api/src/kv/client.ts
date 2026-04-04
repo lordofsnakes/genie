@@ -1,6 +1,7 @@
 import { KvClient, Indexer, Batcher } from '@0glabs/0g-ts-sdk';
 import type { FixedPriceFlow } from '@0glabs/0g-ts-sdk';
 import { ethers } from 'ethers';
+import { OG_KV_CLIENT_URL, OG_PRIVATE_KEY, OG_KV_STREAM_ID } from '../config/env';
 
 const EVM_RPC = 'https://evmrpc-testnet.0g.ai';
 const INDEXER_RPC = 'https://indexer-storage-testnet-turbo.0g.ai';
@@ -10,12 +11,11 @@ const INDEXER_RPC = 'https://indexer-storage-testnet-turbo.0g.ai';
  * Returns null if OG_KV_CLIENT_URL is not set (graceful degradation).
  */
 export function createKvReader(): KvClient | null {
-  const url = process.env.OG_KV_CLIENT_URL;
-  if (!url) {
+  if (!OG_KV_CLIENT_URL) {
     console.warn('[kv] OG_KV_CLIENT_URL not set — KV reads disabled');
     return null;
   }
-  return new KvClient(url);
+  return new KvClient(OG_KV_CLIENT_URL);
 }
 
 /**
@@ -27,8 +27,8 @@ export async function createKvWriter(): Promise<{
   batcher: InstanceType<typeof Batcher>;
   streamId: string;
 } | null> {
-  const privateKey = process.env.OG_PRIVATE_KEY;
-  const streamId = process.env.OG_KV_STREAM_ID;
+  const privateKey = OG_PRIVATE_KEY;
+  const streamId = OG_KV_STREAM_ID;
   if (!privateKey || !streamId) {
     console.warn('[kv] OG_PRIVATE_KEY or OG_KV_STREAM_ID not set — KV writes disabled');
     return null;

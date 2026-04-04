@@ -14,11 +14,9 @@ import { createAddContactTool } from '../tools/add-contact';
 import { createListContactsTool } from '../tools/list-contacts';
 import { DEFAULT_MEMORY } from '../kv/types';
 import { PLANNING_MODEL, ACTION_MODEL } from './providers';
+import { MAX_OUTPUT_TOKENS, WINDOW_LIMIT } from '../config/env';
 
 export type { UserContext };
-
-const MAX_OUTPUT_TOKENS = parseInt(process.env.MAX_OUTPUT_TOKENS ?? '2048', 10);
-const WINDOW_LIMIT = parseInt(process.env.WINDOW_LIMIT ?? '40', 10);
 
 // Load system prompt once at module init — fail hard if missing
 const systemPrompt = loadSystemPrompt();
