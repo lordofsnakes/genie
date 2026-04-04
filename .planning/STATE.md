@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 04-financial-ops-04-03-PLAN.md
-last_updated: "2026-04-04T14:43:03.972Z"
+status: executing
+stopped_at: "04-04: Task 1 complete, Task 2 blocked (checkpoint:human-action -- contract deployment)"
+last_updated: "2026-04-04T15:07:55.849Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 5
+  completed_phases: 4
+  total_plans: 12
+  completed_plans: 12
   percent: 100
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** A single chat message can trigger a verified, human-backed financial transaction — send money, bridge USDC cross-chain, or plan savings — all inside World App with proof-of-human identity.
-**Current focus:** Phase 03 — identity
+**Current focus:** Phase 04 — financial-ops
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 04 (financial-ops) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
 Last activity: 2026-04-04
 
 Progress: [████████████████████] 8/8 plans (100%)
@@ -61,6 +61,7 @@ Progress: [████████████████████] 8/8 pla
 | Phase 03-identity P01 | 7 | 2 tasks | 7 files |
 | Phase 03-identity P02 | 79 | 2 tasks | 3 files |
 | Phase 04-financial-ops P03 | 15 | 2 tasks | 12 files |
+| Phase 04-financial-ops P04 | 2 | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,7 @@ Recent decisions affecting current work:
 - [Phase 03-identity]: System prompt lists concrete gated actions (send money, debts, goals) and available actions so agent guides unverified users to World ID verify button
 - [Phase 04-financial-ops]: Static import for @genie/db in confirm.ts ensures vi.mock() intercepts correctly in tests
 - [Phase 04-financial-ops]: get_balance available to all users (ungated); resolve_contact and send_usdc require userId (DB + verification gate)
+- [Phase 04-financial-ops]: Export chain from clients.ts; pass explicit account + chain to writeContract -- viem 2.45 requires both for non-narrowed wallet client types
 
 ### Pending Todos
 
@@ -108,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T14:43:03.969Z
-Stopped at: Completed 04-financial-ops-04-03-PLAN.md
+Last session: 2026-04-04T15:07:55.845Z
+Stopped at: 04-04: Task 1 complete, Task 2 blocked (checkpoint:human-action -- contract deployment)
 Resume file: None
