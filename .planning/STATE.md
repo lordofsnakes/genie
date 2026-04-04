@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 04-financial-ops-04-01-PLAN.md
-last_updated: "2026-04-04T14:27:29.176Z"
+status: executing
+stopped_at: Completed 04-financial-ops-04-02-PLAN.md
+last_updated: "2026-04-04T16:35:00.000Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
   percent: 100
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** A single chat message can trigger a verified, human-backed financial transaction — send money, bridge USDC cross-chain, or plan savings — all inside World App with proof-of-human identity.
-**Current focus:** Phase 03 — identity
+**Current focus:** Phase 04 — financial-ops
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 04 (financial-ops) — EXECUTING
+Plan: 3 of 3
+Status: Plan 02 complete — ready for Plan 03 (agent wiring)
 Last activity: 2026-04-04
 
-Progress: [████████████████████] 8/8 plans (100%)
+Progress: [████████████████████] 6/6 plans (100%)
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [████████████████████] 8/8 pla
 | Phase 03-identity P01 | 7 | 2 tasks | 7 files |
 | Phase 03-identity P02 | 79 | 2 tasks | 3 files |
 | Phase 04-financial-ops P01 | 4 | 2 tasks | 13 files |
+| Phase 04-financial-ops P02 | 15 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,9 @@ Recent decisions affecting current work:
 - [Phase 04-financial-ops]: [Phase 04-01]: SafeERC20 used in GenieRouter/PayHandler over raw IERC20 calls — prevents silent failure on non-reverting tokens
 - [Phase 04-financial-ops]: [Phase 04-01]: Lazy walletClient init in getWalletClient() — prevents crash on module import when RELAYER_PRIVATE_KEY not set in tests
 - [Phase 04-financial-ops]: [Phase 04-01]: transactions.status defaults to 'confirmed' for backward compat — existing rows and direct sends auto-confirmed
+- [Phase 04-financial-ops]: [Phase 04-02]: Factory pattern for all financial tools — binds userId/userContext at registration time per request
+- [Phase 04-financial-ops]: [Phase 04-02]: resolve_contact uses includes() fuzzy match as primary strategy — 'Alice' matches both 'Alice' and 'Alice Smith', triggering D-08 disambiguation
+- [Phase 04-financial-ops]: [Phase 04-02]: send_usdc cancels existing pending txs before creating new one — prevents multiple pending txs per user
 
 ### Pending Todos
 
@@ -109,6 +113,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T14:27:29.174Z
-Stopped at: Completed 04-financial-ops-04-01-PLAN.md
+Last session: 2026-04-04T16:35:00.000Z
+Stopped at: Completed 04-financial-ops-04-02-PLAN.md
 Resume file: None
