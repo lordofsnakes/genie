@@ -226,7 +226,7 @@ export const ChatInterface = () => {
         style={{ bottom: inputBottom, touchAction: 'none' }}
       >
         <div className="max-w-md mx-auto">
-          <div className="bg-surface p-2 flex items-end gap-2">
+          <div className="bg-surface p-2 flex items-end gap-2 rounded-2xl">
             <textarea
               ref={textareaRef}
               rows={1}
@@ -239,7 +239,7 @@ export const ChatInterface = () => {
             />
             <button
               onClick={handleSend}
-              className="w-10 h-10 bg-accent text-black flex items-center justify-center active:scale-90 transition-transform flex-shrink-0"
+              className="w-10 h-10 bg-accent text-black flex items-center justify-center active:scale-90 transition-transform flex-shrink-0 rounded-xl"
               aria-label="Send"
             >
               <span className="material-symbols-outlined">north</span>

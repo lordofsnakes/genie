@@ -44,12 +44,10 @@ export default function Onboarding() {
     if (touchStartX.current === null) return;
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     touchStartX.current = null;
-    if (Math.abs(dx) < 60) return; // too short — ignore
+    if (Math.abs(dx) < 60) return;
     if (dx < 0) {
-      // swipe left → forward (only if there's a valid next step)
       goTo(step + 1);
     } else {
-      // swipe right → back
       goTo(step - 1);
     }
   };
@@ -59,13 +57,21 @@ export default function Onboarding() {
       ? 'onboarding-enter-forward'
       : 'onboarding-enter-back';
 
+  const canProceed =
+    step === 0 ? true :
+    step === 1 ? selectedGoals.length > 0 :
+    !!(budget && budget !== '0');
+
+  const ctaLabel = step === 0 ? 'Get Started' : step === 1 ? 'Next' : "Let's Go";
+  const ctaAction = step === 2 ? finish : () => goTo(step + 1);
+
   return (
     <div
       className="h-dvh bg-background text-white flex flex-col overflow-hidden"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Progress bar — fully centered */}
+      {/* Progress bar */}
       <div className="px-6 pt-10 pb-0 flex-shrink-0">
         <div className="flex gap-1.5">
           {[0, 1, 2].map((i) => (
@@ -80,63 +86,44 @@ export default function Onboarding() {
 
       {/* Step content */}
       <div key={step} className={`flex-1 min-h-0 flex flex-col ${animClass}`}>
-        {step === 0 && <StepWelcome onNext={() => goTo(1)} />}
+        {step === 0 && <StepWelcome />}
         {step === 1 && (
-          <StepGoals
-            selected={selectedGoals}
-            onToggle={toggleGoal}
-            onNext={() => goTo(2)}
-          />
+          <StepGoals selected={selectedGoals} onToggle={toggleGoal} />
         )}
         {step === 2 && (
-          <StepBudget budget={budget} onChange={setBudget} onFinish={finish} />
+          <StepBudget budget={budget} onChange={setBudget} />
         )}
       </div>
 
-      {/* Back button — bottom, only on steps > 0 */}
-      {step > 0 && (
-        <div className="flex-shrink-0 px-6 pb-8 flex justify-center">
+      {/* Floating action bar */}
+      <div className="flex-shrink-0 flex gap-3 px-5 pb-10">
+        {step > 0 && (
           <button
             onClick={() => goTo(step - 1)}
-            aria-label="Back"
-            className="flex items-center gap-1.5 text-white/30 active:text-white/60 transition-colors"
+            className="flex items-center justify-center py-5 font-headline font-black text-base uppercase tracking-widest bg-white text-black active:opacity-70 transition-opacity rounded-2xl"
+            style={{ width: '30%' }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_back</span>
-            <span className="font-headline text-xs uppercase tracking-widest font-bold">Back</span>
+            Back
           </button>
-        </div>
-      )}
+        )}
+        <button
+          onClick={ctaAction}
+          disabled={!canProceed}
+          className="flex-1 flex items-center justify-center py-5 font-headline font-black italic text-2xl uppercase tracking-tight active:opacity-60 transition-opacity duration-150 disabled:opacity-20 disabled:pointer-events-none rounded-2xl"
+          style={{ backgroundColor: '#ccff00', color: '#000000' }}
+        >
+          {ctaLabel}
+        </button>
+      </div>
     </div>
   );
 }
 
-/* ── Shared CTA button ── */
-function CtaButton({
-  onClick,
-  disabled,
-  children,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="w-full bg-transparent py-5 font-headline font-extrabold text-xl uppercase tracking-widest active:opacity-60 transition-opacity duration-150 disabled:opacity-20 disabled:pointer-events-none"
-      style={{ color: '#ccff00' }}
-    >
-      {children}
-    </button>
-  );
-}
-
 /* ── Step 1: Welcome ── */
-function StepWelcome({ onNext }: { onNext: () => void }) {
+function StepWelcome() {
   return (
-    <div className="flex-1 flex flex-col px-6 pb-4">
-      <div className="pt-10 mb-8">
+    <div className="flex-1 min-h-0 flex flex-col px-6 pb-4 overflow-hidden">
+      <div className="pt-10 mb-4 flex-shrink-0">
         <p className="font-headline text-[11px] uppercase tracking-[0.25em] text-accent font-bold mb-3">
           Welcome
         </p>
@@ -148,16 +135,16 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
         </p>
       </div>
 
-      <div className="flex items-center justify-center h-64">
+      <div className="flex-1 min-h-0 flex items-center justify-center">
         <img
           src="/genie.png"
           alt="Genie"
-          className="w-64 h-full object-contain"
-          style={{ mixBlendMode: 'screen' }}
+          className="w-48 object-contain"
+          style={{ mixBlendMode: 'screen', maxHeight: '100%' }}
         />
       </div>
 
-      <div className="mt-6 flex flex-col gap-5">
+      <div className="flex flex-col gap-5 pb-2 flex-shrink-0">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 w-14 h-16 -mt-2">
             <img
@@ -193,8 +180,6 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
             </p>
           </div>
         </div>
-
-        <CtaButton onClick={onNext}>Get Started</CtaButton>
       </div>
     </div>
   );
@@ -204,15 +189,13 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
 function StepGoals({
   selected,
   onToggle,
-  onNext,
 }: {
   selected: string[];
   onToggle: (g: string) => void;
-  onNext: () => void;
 }) {
   return (
-    <div className="flex-1 flex flex-col px-6 pb-4">
-      <div className="pt-10 mb-10">
+    <div className="flex-1 min-h-0 flex flex-col px-6 pb-4 overflow-hidden">
+      <div className="pt-10 mb-6 flex-shrink-0">
         <p className="font-headline text-[11px] uppercase tracking-[0.25em] text-accent font-bold mb-3">
           Your Goals
         </p>
@@ -222,27 +205,27 @@ function StepGoals({
         <p className="text-sm text-white/40 mt-2">Select all that apply.</p>
       </div>
 
-      <div className="flex flex-col gap-6 flex-1">
+      <div className="flex flex-col gap-3 flex-1 min-h-0 pb-2">
         {GOALS.map((goal) => {
           const active = selected.includes(goal);
           return (
             <button
               key={goal}
               onClick={() => onToggle(goal)}
-              className="w-full flex items-center justify-between px-5 py-5 border rounded-xl transition-colors duration-150 active:scale-[0.98]"
+              className="flex-1 w-full relative flex items-center justify-center px-7 border rounded-2xl transition-colors duration-150 active:scale-[0.98]"
               style={{
                 borderColor: active ? '#ccff00' : '#2a2a2a',
                 backgroundColor: active ? 'rgba(204,255,0,0.06)' : '#171717',
               }}
             >
               <span
-                className="font-body font-semibold text-base"
+                className="font-body font-semibold text-base text-center"
                 style={{ color: active ? '#ccff00' : '#ffffff' }}
               >
                 {goal}
               </span>
               <span
-                className="material-symbols-outlined text-base"
+                className="absolute right-7 material-symbols-outlined text-base"
                 style={{ color: active ? '#ccff00' : '#444' }}
               >
                 {active ? 'check_circle' : 'radio_button_unchecked'}
@@ -250,12 +233,6 @@ function StepGoals({
             </button>
           );
         })}
-      </div>
-
-      <div className="mt-2">
-        <CtaButton onClick={onNext} disabled={selected.length === 0}>
-          Next
-        </CtaButton>
       </div>
     </div>
   );
@@ -265,11 +242,9 @@ function StepGoals({
 function StepBudget({
   budget,
   onChange,
-  onFinish,
 }: {
   budget: string;
   onChange: (v: string) => void;
-  onFinish: () => void;
 }) {
   const handleInput = (raw: string) => {
     const digits = raw.replace(/[^0-9]/g, '');
@@ -283,17 +258,17 @@ function StepBudget({
           Spending Limit
         </p>
         <h1 className="font-headline text-3xl font-extrabold tracking-tighter leading-tight text-white">
-          How much can Genie spend on your behalf?
+          How much can Genie spend before asking for permission?
         </h1>
         <p className="text-sm text-white/40 mt-2">
-          Set a monthly limit. You can change this anytime.
+          Set a limit. You can change this anytime.
         </p>
       </div>
 
       <div className="flex-1 flex flex-col justify-center gap-8">
         <div className="flex flex-col gap-3">
           <div className="rounded-2xl bg-surface border border-white/10 flex items-center px-5 py-5">
-            <span className="font-headline text-3xl font-extrabold text-white/20 mr-1 select-none">
+            <span className="font-headline text-2xl font-extrabold text-white/20 mr-1 select-none flex-shrink-0">
               $
             </span>
             <input
@@ -302,11 +277,11 @@ function StepBudget({
               placeholder="0"
               value={budget}
               onChange={(e) => handleInput(e.target.value)}
-              className="flex-1 bg-transparent border-none outline-none font-headline text-3xl font-extrabold text-white placeholder:text-white/20 focus:ring-0"
-              style={{ fontSize: '16px' }}
+              className="min-w-0 flex-1 bg-transparent border-none outline-none font-headline font-extrabold text-white placeholder:text-white/20 focus:ring-0"
+              style={{ fontSize: '26px' }}
             />
-            <span className="font-headline text-sm text-white/30 uppercase tracking-widest ml-2">
-              USD / mo
+            <span className="font-headline text-sm text-white/30 uppercase tracking-widest ml-2 flex-shrink-0">
+              USD
             </span>
           </div>
 
@@ -315,9 +290,9 @@ function StepBudget({
               <button
                 key={amt}
                 onClick={() => onChange(amt)}
-                className="py-2.5 rounded-lg text-center font-headline font-bold text-xs uppercase tracking-wider transition-colors duration-150 active:scale-95"
+                className="py-4 rounded-xl text-center font-headline font-bold text-sm uppercase tracking-wider transition-colors duration-150 active:scale-95"
                 style={{
-                  backgroundColor: budget === amt ? '#ccff00' : '#171717',
+                  backgroundColor: budget === amt ? '#ccff00' : '#1f1f1f',
                   color: budget === amt ? '#000' : '#fff',
                 }}
               >
@@ -331,12 +306,6 @@ function StepBudget({
           Genie will never exceed this limit without your approval. This is a
           safeguard, not a commitment.
         </p>
-      </div>
-
-      <div className="mt-2">
-        <CtaButton onClick={onFinish} disabled={!budget || budget === '0'}>
-          Let&apos;s Go
-        </CtaButton>
       </div>
     </div>
   );

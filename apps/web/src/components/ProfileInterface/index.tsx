@@ -52,8 +52,8 @@ export const ProfileInterface = () => {
         <p className="text-xs text-white/40 mb-3 leading-relaxed">
           Set the maximum amount Genie can spend per transaction on your behalf.
         </p>
-        <div className="flex gap-2">
-          <div className="flex-1 flex items-center bg-transparent px-4">
+        <div className="flex gap-2 w-full overflow-hidden">
+          <div className="flex-1 min-w-0 flex items-center bg-transparent px-4">
             <span className="text-white/40 text-sm font-bold mr-1 flex-shrink-0">$</span>
             <input
               type="number"
@@ -68,7 +68,7 @@ export const ProfileInterface = () => {
           </div>
           <button
             onClick={handleSaveLimit}
-            className="px-5 bg-accent text-black font-headline font-extrabold text-xs uppercase tracking-widest active:scale-95 transition-transform"
+            className="flex-shrink-0 min-w-[64px] px-4 py-3 bg-accent text-black font-headline font-extrabold text-xs uppercase tracking-widest active:scale-95 transition-transform text-center whitespace-nowrap rounded-lg"
           >
             {limitSaved ? 'Saved!' : 'Set'}
           </button>
@@ -129,7 +129,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
       <p className="font-headline text-[10px] uppercase tracking-[0.25em] text-white/40 mb-4">
         {label}
       </p>
-      <div className="bg-surface p-4">
+      <div className="bg-surface p-4 overflow-hidden rounded-xl">
         {children}
       </div>
     </div>

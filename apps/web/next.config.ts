@@ -8,6 +8,15 @@ const nextConfig: NextConfig = {
   },
   allowedDevOrigins: ['*.ngrok-free.app', '*.ngrok.io', 'localhost'],
   reactStrictMode: false,
+  compress: true,
+  productionBrowserSourceMaps: false,
+  experimental: {
+    optimizePackageImports: [
+      '@worldcoin/minikit-js',
+      '@worldcoin/mini-apps-ui-kit-react',
+      '@ai-sdk/react',
+    ],
+  },
 };
 
 export default nextConfig;

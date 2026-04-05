@@ -77,7 +77,7 @@ export const Verify = () => {
 
   return (
     <div className="grid w-full gap-4">
-      <p className="text-lg font-semibold">Verify</p>
+      <p className="text-lg font-semibold text-white">Verify</p>
       <LiveFeedback
         label={{
           failed: 'Failed to verify',
@@ -92,7 +92,7 @@ export const Verify = () => {
           disabled={buttonState === 'pending'}
           size="lg"
           variant="primary"
-          className="w-full"
+          className="w-full !bg-white !text-black"
         >
           Verify with World ID
         </Button>

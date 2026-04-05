@@ -6,10 +6,9 @@ import { SessionProvider } from 'next-auth/react';
 import dynamic from 'next/dynamic';
 import type { ReactNode } from 'react';
 
-const ErudaProvider = dynamic(
-  () => import('@/providers/Eruda').then((c) => c.ErudaProvider),
-  { ssr: false },
-);
+const ErudaProvider = process.env.NODE_ENV === 'development'
+  ? dynamic(() => import('@/providers/Eruda').then((c) => c.ErudaProvider), { ssr: false })
+  : ({ children }: { children: ReactNode }) => <>{children}</>;
 
 // Define props for ClientProviders
 interface ClientProvidersProps {
