@@ -138,8 +138,8 @@ Plans:
   4. isVerified correctly reflects database state after World ID verification
 **Plans**: 2 plans
 Plans:
-- [ ] 08-01-PLAN.md — Simplify backend verify (slim schema, remove double Cloud API call) + BFF slim payload + test updates
-- [ ] 08-02-PLAN.md — Middleware auth redirect + Verify component env var/onVerified + rp-signature session guard
+- [x] 08-01-PLAN.md — Simplify backend verify (slim schema, remove double Cloud API call) + BFF slim payload + test updates
+- [x] 08-02-PLAN.md — Middleware auth redirect + Verify component env var/onVerified + rp-signature session guard
 
 ### Phase 9: Confirmation Flow
 **Goal**: Over-threshold USDC transfers show a confirmation UI and execute upon user approval
