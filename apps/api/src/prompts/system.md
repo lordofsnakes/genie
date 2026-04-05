@@ -50,3 +50,25 @@ Example response format:
 ```json
 {"type":"confirmation_required","txId":"<txId>","amount":<amount>,"recipient":"<wallet address>","expiresInMinutes":15}
 ```
+
+## Contact Disambiguation
+
+When the user requests to send money and multiple contacts match, or when listing contacts for selection, output a contact_list JSON block as the ONLY json block in your response.
+
+Format:
+```json
+{
+  "type": "contact_list",
+  "contacts": [
+    { "name": "Alice Chen", "walletAddress": "0xabc...123", "username": "alicechen" }
+  ],
+  "prompt": "Which contact did you mean?"
+}
+```
+
+Rules:
+- `type` must be exactly `"contact_list"`
+- `contacts` is an array; each entry requires `name` and `walletAddress`; `username` is optional
+- Include a brief `prompt` explaining why you are showing contacts
+- Do NOT include any other json fenced blocks in the same message
+- Surround the json block with a brief explanation (e.g. "I found a few contacts matching that name:")
