@@ -23,8 +23,8 @@ export const walletAuth = async () => {
   });
 
   // Guard: if MiniKit did not return a successful payload, abort cleanly
-  const payload = result?.finalPayload ?? result?.data;
-  if (!payload || payload.status !== 'success') {
+  const payload = result.data;
+  if (!payload || !payload.address) {
     console.warn('[walletAuth] MiniKit did not return a success payload:', result);
     throw new Error('wallet_auth_failed');
   }

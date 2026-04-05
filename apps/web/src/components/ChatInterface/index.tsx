@@ -216,7 +216,7 @@ export const ChatInterface = () => {
           )}
           {isThinking && <ThinkingIndicator />}
           {error && status === 'error' && (
-            <ErrorMessage error={error} onRetry={() => regenerate()} />
+            <ErrorMessage onRetry={() => regenerate()} />
           )}
           <div ref={messagesEndRef} />
         </div>
@@ -408,7 +408,7 @@ function AiMessageBubble({
   );
 }
 
-function ErrorMessage({ error, onRetry }: { error: Error; onRetry: () => void }) {
+function ErrorMessage({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="flex items-end gap-2">
       <div className="flex-shrink-0 w-20 h-24 self-end">

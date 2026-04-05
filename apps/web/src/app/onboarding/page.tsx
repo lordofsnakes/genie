@@ -111,7 +111,7 @@ export default function Onboarding() {
           <StepGoals selected={selectedGoals} onToggle={toggleGoal} />
         )}
         {step === 2 && (
-          <StepBudget budget={budget} onChange={setBudget} onFinish={() => finish(budget)} />
+          <StepBudget budget={budget} onChange={setBudget} />
         )}
       </div>
 
@@ -262,11 +262,9 @@ function StepGoals({
 function StepBudget({
   budget,
   onChange,
-  onFinish,
 }: {
   budget: string;
   onChange: (v: string) => void;
-  onFinish: () => void;
 }) {
   const handleInput = (raw: string) => {
     const digits = raw.replace(/[^0-9]/g, '');
