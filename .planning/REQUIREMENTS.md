@@ -106,7 +106,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FOPS-05 | Phase 12 | Complete |
 | FOPS-06 | Phase 4 | Complete |
 | XCHD-01 | Phase 12 | Complete |
-| SPND-01 | Phase 13 | Pending |
+| SPND-01 | Phase 13 | Complete |
 | SPND-02 | Phase 7 | Complete |
 | DEBT-01 | Phase 7 | Complete |
 | DEBT-02 | Phase 7 | Complete |
