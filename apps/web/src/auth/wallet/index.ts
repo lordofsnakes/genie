@@ -21,17 +21,28 @@ export const walletAuth = async () => {
     notBefore: new Date(Date.now() - 24 * 60 * 60 * 1000),
     statement: `Authenticate (${crypto.randomUUID().replace(/-/g, '')}).`,
   });
-  console.log('Result', result);
 
-  await signIn('credentials', {
+  // Guard: if MiniKit did not return a successful payload, abort cleanly
+  const payload = result?.finalPayload ?? result?.data;
+  if (!payload || payload.status !== 'success') {
+    console.warn('[walletAuth] MiniKit did not return a success payload:', result);
+    throw new Error('wallet_auth_failed');
+  }
+
+  const signInResult = await signIn('credentials', {
     redirect: false,
     nonce,
     signedNonce,
     finalPayloadJson: JSON.stringify({
       status: 'success',
-      address: result.data.address,
-      message: result.data.message,
-      signature: result.data.signature,
+      address: payload.address,
+      message: payload.message,
+      signature: payload.signature,
     }),
   });
+
+  if (signInResult?.error) {
+    console.error('[walletAuth] signIn failed:', signInResult.error);
+    throw new Error(signInResult.error);
+  }
 };

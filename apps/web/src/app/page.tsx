@@ -11,6 +11,7 @@ export default function Home() {
   const hasAttemptedAuth = useRef(false);
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -20,9 +21,11 @@ export default function Home() {
     if (!isInstalled || hasAttemptedAuth.current) return;
     hasAttemptedAuth.current = true;
 
+    const onboardingDone = localStorage.getItem('genie_onboarding_done') === '1';
+
     getSession().then((session) => {
       if (session) {
-        if (session.user?.needsOnboarding) {
+        if (session.user?.needsOnboarding && !onboardingDone) {
           router.push('/onboarding');
         } else {
           router.push('/home');
@@ -31,13 +34,22 @@ export default function Home() {
         walletAuth()
           .then(async () => {
             const freshSession = await getSession();
-            if (freshSession?.user?.needsOnboarding) {
+            if (!freshSession) {
+              // signIn completed but no session was created — do NOT navigate
+              // (navigating would trigger middleware → redirect back to '/' → infinite loop)
+              setAuthError('Sign in failed. Please try again.');
+              return;
+            }
+            if (freshSession.user?.needsOnboarding && !onboardingDone) {
               router.push('/onboarding');
             } else {
               router.push('/home');
             }
           })
-          .catch((error) => console.error('Auto wallet authentication error', error));
+          .catch((error) => {
+            console.error('Auto wallet authentication error', error);
+            setAuthError(error?.message ?? 'Authentication failed. Please try again.');
+          });
       }
     });
   }, [isInstalled, router]);
@@ -50,6 +62,23 @@ export default function Home() {
           <p className="text-white/40 text-sm font-body">
             This app must be opened inside the World App to work.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (authError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-8">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <p className="text-white text-sm font-body font-semibold">Sign in failed</p>
+          <p className="text-white/40 text-xs font-body">{authError}</p>
+          <button
+            onClick={() => { hasAttemptedAuth.current = false; setAuthError(null); }}
+            className="mt-2 px-6 py-3 bg-accent text-black font-headline font-bold text-xs uppercase tracking-widest"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
