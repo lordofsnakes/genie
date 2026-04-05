@@ -70,7 +70,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const walletAddress = result.siweMessageData.address;
 
         // D-01: Provision user in backend — get-or-create by wallet address, returns UUID
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        if (!apiUrl) {
+          console.error('[auth] NEXT_PUBLIC_API_URL is not set');
+          return null;
+        }
+
         const provisionRes = await fetch(`${apiUrl}/api/users/provision`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
