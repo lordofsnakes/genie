@@ -35,22 +35,15 @@ const dirRef = useRef<'forward' | 'back'>('forward');
     );
   };
 
-  const finish = async (budgetValue: string) => {
+  const finish = (budgetValue: string) => {
     const userId = session?.user?.id;
     if (userId && budgetValue && budgetValue !== '0') {
-      try {
-        await fetch(`${API_URL}/api/users/profile`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            autoApproveUsd: Number(budgetValue),
-          }),
-        });
-      } catch (err) {
-        console.error('[onboarding] failed to save threshold:', err);
-        // Non-blocking: proceed to home even if API call fails
-      }
+      // Fire-and-forget — don't block navigation on the API round-trip
+      fetch(`${API_URL}/api/users/profile`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, autoApproveUsd: Number(budgetValue) }),
+      }).catch((err) => console.error('[onboarding] failed to save threshold:', err));
     }
     localStorage.setItem('genie_onboarding_done', '1');
     router.push('/home');
