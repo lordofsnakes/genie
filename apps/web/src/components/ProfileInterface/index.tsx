@@ -1,7 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { Verify } from '../Verify';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 // TODO: replace with real data from API
 const MOCK_OLD_TRANSACTIONS = [
@@ -13,17 +16,35 @@ const MOCK_OLD_TRANSACTIONS = [
 ];
 
 export const ProfileInterface = () => {
+  const { data: session } = useSession();
   // TODO: initialise from session / user API
   const [spendingLimit, setSpendingLimit] = useState('');
   const [limitSaved, setLimitSaved] = useState(false);
+  const [limitError, setLimitError] = useState('');
   const [showAllTx, setShowAllTx] = useState(false);
 
-  const handleSaveLimit = () => {
+  const handleSaveLimit = async () => {
     const val = parseFloat(spendingLimit);
     if (isNaN(val) || val <= 0) return;
-    // TODO: persist spending limit to agent config API
-    setLimitSaved(true);
-    setTimeout(() => setLimitSaved(false), 2000);
+
+    setLimitError('');
+    setLimitSaved(false);
+    try {
+      const res = await fetch(`${API_URL}/api/users/profile`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: session?.user?.id, autoApproveUsd: val }),
+      });
+      if (res.ok) {
+        setLimitSaved(true);
+        setTimeout(() => setLimitSaved(false), 2000);
+      } else {
+        const json = await res.json().catch(() => ({ message: 'Failed to save' }));
+        setLimitError(json.message ?? 'Failed to save');
+      }
+    } catch {
+      setLimitError('Network error — please try again');
+    }
   };
 
   return (
@@ -77,6 +98,9 @@ export const ProfileInterface = () => {
           <p className="mt-2 text-[11px] text-accent/70">
             Genie will ask for approval on anything above ${parseFloat(spendingLimit).toFixed(2)} USDC.
           </p>
+        )}
+        {limitError && (
+          <p className="mt-2 text-[11px] text-red-400">{limitError}</p>
         )}
       </Section>
 
