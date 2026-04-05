@@ -284,7 +284,7 @@ function EmptyState() {
             Genie
           </span>
         </div>
-        <p className="text-sm leading-relaxed">Hi, I&apos;m Genie, your personal Accountant Agent.</p>
+        <p className="text-sm leading-relaxed">Hi, I&apos;m Genie, your personal accountant.</p>
       </div>
     </div>
   );
