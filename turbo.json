@@ -6,7 +6,25 @@
     },
     "test": {},
     "build": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**"],
+      "env": [
+        "DATABASE_URL",
+        "OG_COMPUTE_URL",
+        "OG_API_KEY",
+        "OG_PLANNING_MODEL",
+        "OG_ACTION_MODEL",
+        "OG_PRIVATE_KEY",
+        "WORLD_APP_ID",
+        "WORLD_ACTION",
+        "WORLD_VERIFY_API_URL",
+        "WORLD_CHAIN_RPC_URL",
+        "NEXT_PUBLIC_API_URL",
+        "NEXT_PUBLIC_APP_ID",
+        "NEXT_PUBLIC_WORLD_ACTION",
+        "AUTH_SECRET",
+        "HMAC_SECRET_KEY"
+      ]
     },
     "db:push": {
       "cache": false
