@@ -6,6 +6,7 @@ import { chatRoute } from './routes/chat';
 import { verifyRoute } from './routes/verify';
 import { confirmRoute } from './routes/confirm';
 import { usersRoute } from './routes/users';
+import { balanceRoute } from './routes/balance';
 import { PORT } from './config/env';
 
 const app = new Hono();
@@ -16,6 +17,7 @@ app.route('/api', chatRoute);
 app.route('/api', verifyRoute);
 app.route('/api', confirmRoute);
 app.route('/api', usersRoute);
+app.route('/api', balanceRoute);
 
 serve({ fetch: app.fetch, port: PORT });
 console.log(`[genie-api] listening on http://localhost:${PORT}`);
