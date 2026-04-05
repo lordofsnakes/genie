@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-04-05T03:57:28.756Z"
+status: executing
+stopped_at: Completed 12-02-PLAN.md
+last_updated: "2026-04-05T04:30:36.264Z"
 last_activity: 2026-04-05
 progress:
   total_phases: 15
   completed_phases: 11
-  total_plans: 28
-  completed_plans: 28
+  total_plans: 30
+  completed_plans: 29
   percent: 100
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** A single chat message can trigger a verified, human-backed financial transaction — send money, bridge USDC cross-chain, or plan savings — all inside World App with proof-of-human identity.
-**Current focus:** Phase 11 — live-balance
+**Current focus:** Phase 12 — send-crosschain
 
 ## Current Position
 
-Phase: 11 (live-balance) — EXECUTING
-Plan: 1 of 1
-Status: Phase complete — ready for verification
+Phase: 12 (send-crosschain) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-05
 
 Progress: [████████████████████] 8/8 plans (100%)
@@ -72,6 +72,7 @@ Progress: [████████████████████] 8/8 pla
 | Phase 07 P04 | 3 | 2 tasks | 3 files |
 | Phase 10-onboarding-allowance P01 | 3 | 3 tasks | 3 files |
 | Phase 11 P01 | 3 | 2 tasks | 5 files |
+| Phase 12-send-crosschain P02 | 5 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,8 @@ Recent decisions affecting current work:
 - [Phase 10-onboarding-allowance]: Budget amount is exact USDC units: BigInt(budgetUsd) * BigInt(1_000_000) — no infinite approval per D-03
 - [Phase 11]: Balance route uses viem isAddress for wallet validation — consistent with existing codebase pattern
 - [Phase 11]: useBalance memoizes fetchBalance with useCallback and exposes as refetch — enables post-send balance refresh
+- [Phase 12-send-crosschain]: SendModal calls POST /api/send instead of triggerMiniKitPay — real backend integration
+- [Phase 12-send-crosschain]: ConfirmCard URL fixed /confirm -> /api/confirm — one-line fix for silent over-threshold failure
 
 ### Pending Todos
 
@@ -139,6 +142,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-05T03:57:28.752Z
-Stopped at: Completed 11-01-PLAN.md
+Last session: 2026-04-05T04:30:36.260Z
+Stopped at: Completed 12-02-PLAN.md
 Resume file: None

@@ -31,12 +31,12 @@ Requirements for hackathon demo. Each maps to roadmap phases.
 - [x] **FOPS-02**: User can send USDC to contacts/addresses via natural language
 - [x] **FOPS-03**: Agent resolves recipients via contacts, ENS, or wallet address
 - [x] **FOPS-04**: Transfers under auto-approve threshold execute immediately
-- [ ] **FOPS-05**: Transfers over threshold require explicit confirmation
+- [x] **FOPS-05**: Transfers over threshold require explicit confirmation
 - [x] **FOPS-06**: GenieRouter + PayHandler smart contracts handle transfers on World Chain
 
 ### Cross-Chain Deposits
 
-- [ ] **XCHD-01**: User can deposit USDC from Ethereum/Base/Arbitrum to World Chain via Arc CCTP
+- [x] **XCHD-01**: User can deposit USDC from Ethereum/Base/Arbitrum to World Chain via Arc CCTP
 
 ### Spending & Social
 
@@ -100,12 +100,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WRID-04 | Phase 8 | Complete |
 | WRID-05 | Phase 3 | Complete |
 | FOPS-01 | Phase 11 | Complete |
-| FOPS-02 | Phase 12 | Pending |
-| FOPS-03 | Phase 12 | Pending |
+| FOPS-02 | Phase 12 | Complete |
+| FOPS-03 | Phase 12 | Complete |
 | FOPS-04 | Phase 10 | Complete |
-| FOPS-05 | Phase 12 | Pending |
+| FOPS-05 | Phase 12 | Complete |
 | FOPS-06 | Phase 4 | Complete |
-| XCHD-01 | Phase 12 | Pending |
+| XCHD-01 | Phase 12 | Complete |
 | SPND-01 | Phase 13 | Pending |
 | SPND-02 | Phase 7 | Complete |
 | DEBT-01 | Phase 7 | Complete |
