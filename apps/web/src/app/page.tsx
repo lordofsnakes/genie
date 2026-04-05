@@ -21,15 +21,9 @@ export default function Home() {
     if (!isInstalled || hasAttemptedAuth.current) return;
     hasAttemptedAuth.current = true;
 
-    const onboardingDone = typeof window !== 'undefined' ? localStorage.getItem('genie_onboarding_done') === '1' : false;
-
     getSession().then((session) => {
       if (session) {
-        if (session.user?.needsOnboarding && !onboardingDone) {
-          router.push('/onboarding');
-        } else {
-          router.push('/home');
-        }
+        router.push('/onboarding');
       } else {
         walletAuth()
           .then(async () => {
@@ -38,11 +32,7 @@ export default function Home() {
               setAuthError('Sign in failed. Please try again.');
               return;
             }
-            if (freshSession.user?.needsOnboarding && !onboardingDone) {
-              router.push('/onboarding');
-            } else {
-              router.push('/home');
-            }
+            router.push('/onboarding');
           })
           .catch((error) => {
             console.error('Auto wallet authentication error', error);
