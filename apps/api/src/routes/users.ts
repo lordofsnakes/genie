@@ -55,9 +55,10 @@ usersRoute.post('/provision', async (c) => {
     return c.json({ error: 'PROVISION_FAILED', message: 'Could not create user' }, 500);
   }
 
-  const needsOnboarding = newUser.displayName.startsWith('0x');
-  console.log(`[route:users] provision — new user ${newUser.id}, needsOnboarding=${needsOnboarding}`);
-  return c.json({ userId: newUser.id, needsOnboarding });
+  // New users always go through onboarding regardless of display name.
+  // localStorage flag on the client prevents it re-triggering after completion.
+  console.log(`[route:users] provision — new user ${newUser.id}, needsOnboarding=true`);
+  return c.json({ userId: newUser.id, needsOnboarding: true });
 });
 
 const patchProfileSchema = z.object({

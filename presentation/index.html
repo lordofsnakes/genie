@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genie Presentation</title>
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,400&display=swap">
+    <style>
+        :root {
+            --background: #000000;
+            --surface: #171717;
+            --text: #ffffff;
+            --accent: #ccff00;
+            --font-main: 'Satoshi', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--background);
+            color: var(--text);
+            font-family: var(--font-main);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .slides-container {
+            height: 100%;
+            width: 100%;
+            display: flex;
+            transition: transform 0.6s cubic-bezier(0.85, 0, 0.15, 1);
+        }
+
+        .slide {
+            min-width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem;
+            position: relative;
+        }
+
+        /* Brutalist accents */
+        .slide::before {
+            content: '';
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            width: 40px;
+            height: 40px;
+            border-top: 4px solid var(--accent);
+            border-left: 4px solid var(--accent);
+        }
+
+        .slide::after {
+            content: '';
+            position: absolute;
+            bottom: 2rem;
+            right: 2rem;
+            width: 40px;
+            height: 40px;
+            border-bottom: 4px solid var(--accent);
+            border-right: 4px solid var(--accent);
+        }
+
+        h1 {
+            font-size: 5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -0.05em;
+            margin-bottom: 1rem;
+            text-align: center;
+            overflow: visible;
+        }
+
+        .title-wrap {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+
+        .genie-img {
+            position: absolute;
+            bottom: 48%;
+            left: -8px;
+            width: 55px;
+            height: auto;
+            pointer-events: none;
+            z-index: 0;
+            -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 52%, black 40%, transparent 85%);
+            mask-image: radial-gradient(ellipse 60% 70% at 50% 52%, black 40%, transparent 85%);
+        }
+
+        .title-wrap h1 {
+            position: relative;
+            z-index: 1;
+            margin-bottom: 0;
+        }
+
+        h2 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 2rem;
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+            align-self: flex-start;
+        }
+
+        .subtitle {
+            font-size: 1.5rem;
+            color: rgba(255, 255, 255, 0.6);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+        }
+
+        ul {
+            list-style: none;
+            align-self: flex-start;
+            max-width: 800px;
+        }
+
+        li {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+            position: relative;
+            line-height: 1.4;
+        }
+
+        li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .highlight {
+            color: var(--accent);
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 2rem;
+            z-index: 100;
+        }
+
+        .control-btn {
+            background: var(--surface);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            color: var(--text);
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 1.5rem;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: var(--accent);
+            transition: width 0.3s ease;
+            z-index: 1000;
+        }
+
+        .diagram-placeholder {
+            width: 100%;
+            height: 400px;
+            background: var(--surface);
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 3rem; }
+            h2 { font-size: 2rem; }
+            li { font-size: 1.2rem; }
+            .slide { padding: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progress"></div>
+
+    <div class="slides-container" id="container">
+        <!-- Slide 1: Title -->
+        <section class="slide">
+            <div class="title-wrap">
+                <h1>Genie</h1>
+                <img src="sitting_genie.png" alt="Genie" class="genie-img">
+            </div>
+            <p class="subtitle">TUM Blockchain Club</p>
+        </section>
+
+        <!-- Slide 2: The Problem -->
+        <section class="slide">
+            <h2>The Problem</h2>
+            <ul>
+                <li>Handling finances should feel like talking to a <span class="highlight">friend</span></li>
+                <li>Take control of your finances and let an <span class="highlight">expert</span> take over</li>
+                <li>Analyze crypto spending habits and enable easy stablecoin usage</li>
+            </ul>
+        </section>
+
+        <!-- Slide 3: Tech Stack -->
+        <section class="slide">
+            <h2>How it works</h2>
+            <ul>
+                <li><span class="highlight">0G Privacy Inference:</span> Keep financial data private from LLM providers</li>
+                <li><span class="highlight">World ID:</span> Sybil resistance for agents and human-backed accountants</li>
+                <li><span class="highlight">Arc:</span> Seamless modularity between USDC and EURC across chains</li>
+            </ul>
+        </section>
+
+        <!-- Slide 4: Architecture -->
+        <section class="slide">
+            <h2>Architecture</h2>
+            <div class="diagram-placeholder">
+                [ User Flow Diagram: Interaction & Operation Example ]
+            </div>
+            <p style="margin-top: 2rem; color: rgba(255,255,255,0.4); font-size: 0.9rem; text-transform: uppercase;">
+                Lending money to a friend via autonomous protocol interaction
+            </p>
+        </section>
+
+        <!-- Slide 5: Demo -->
+        <section class="slide">
+            <h1 style="color: var(--accent);">Ready to meet Genie?</h1>
+            <p class="subtitle" style="margin-top: 1rem;">Experience the future of autonomous accounting</p>
+        </section>
+    </div>
+
+    <div class="controls">
+        <div class="control-btn" onclick="prevSlide()">←</div>
+        <div class="control-btn" onclick="nextSlide()">→</div>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const totalSlides = document.querySelectorAll('.slide').length;
+        const container = document.getElementById('container');
+        const progress = document.getElementById('progress');
+
+        function updateSlide() {
+            container.style.transform = `translateX(-${currentSlide * 100}vw)`;
+            progress.style.width = `${((currentSlide + 1) / totalSlides) * 100}%`;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        // Initialize progress bar
+        updateSlide();
+    </script>
+</body>
+</html>
