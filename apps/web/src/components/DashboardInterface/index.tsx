@@ -16,10 +16,12 @@ const MOCK_TRANSACTIONS = [
 ];
 
 const GENIE_SUMMARY =
-  "Your wallet is all set. Add funds and I'll track every move for you.";
+  "Saving for a trip? I can help you limit dining out spend to get there faster.";
+
 
 export const DashboardInterface = () => {
   const { data: session } = useSession();
+
   const [showReceive, setShowReceive] = useState(false);
   const [showSend, setShowSend] = useState(false);
   const [showAddFunds, setShowAddFunds] = useState(false);
@@ -27,8 +29,8 @@ export const DashboardInterface = () => {
 
   return (
     <>
-    <div className="flex flex-col bg-background text-white font-body overflow-hidden h-full touch-none">
-    <div className="flex-1 overflow-hidden">
+    <div className="flex flex-col bg-background text-white font-body overflow-hidden h-full">
+    <div className="flex-1 overflow-y-auto overscroll-contain" style={{ touchAction: 'pan-y' }}>
 
       {/* ── Header ── */}
       <div className="px-6 pt-10 pb-4">
@@ -71,7 +73,6 @@ export const DashboardInterface = () => {
               Genie
             </span>
           </div>
-          {/* TODO: replace with live finance summary from API */}
           <p className="text-sm text-white/80 leading-relaxed">{GENIE_SUMMARY}</p>
         </div>
       </div>
