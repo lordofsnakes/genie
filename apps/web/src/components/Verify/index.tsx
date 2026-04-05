@@ -9,7 +9,11 @@ import { useState } from 'react';
  * It's critical you verify the proof on the server side.
  * Read More: https://docs.world.org/mini-apps/commands/verify#verifying-the-proof
  */
-export const Verify = () => {
+interface VerifyProps {
+  onVerified?: () => void;
+}
+
+export const Verify = ({ onVerified }: VerifyProps = {}) => {
   const [buttonState, setButtonState] = useState<
     'pending' | 'success' | 'failed' | undefined
   >(undefined);
@@ -67,6 +71,7 @@ export const Verify = () => {
       const data = await response.json();
       if (data.verifyRes.success) {
         setButtonState('success');
+        onVerified?.();
       } else {
         setButtonState('failed');
         setTimeout(() => setButtonState(undefined), 2000);
