@@ -11,12 +11,12 @@ const provisionSchema = z.object({
 });
 
 /**
- * POST /users/provision
+ * POST /api/users/provision
  * Get-or-create a user by wallet address (idempotent — D-02).
  * Returns { userId: UUID, needsOnboarding: boolean }.
  * needsOnboarding is true when the user has no proper display name (only a wallet-derived default).
  */
-usersRoute.post('/users/provision', async (c) => {
+usersRoute.post('/provision', async (c) => {
   const body = await c.req.json();
   const parsed = provisionSchema.safeParse(body);
   if (!parsed.success) {
@@ -66,12 +66,12 @@ const patchProfileSchema = z.object({
 });
 
 /**
- * PATCH /users/profile — update user's auto-approve threshold.
+ * PATCH /api/users/profile — update user's auto-approve threshold.
  *
  * Accepts wallet address or UUID as userId (resolveUserId handles both).
  * Used by the onboarding flow to persist the spending limit the user configures.
  */
-usersRoute.patch('/users/profile', async (c) => {
+usersRoute.patch('/profile', async (c) => {
   try {
     const body = await c.req.json();
     const parsed = patchProfileSchema.safeParse(body);

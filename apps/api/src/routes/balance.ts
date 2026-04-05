@@ -4,7 +4,7 @@ import { publicClient, USDC_ADDRESS } from '../chain/clients';
 
 export const balanceRoute = new Hono();
 
-balanceRoute.get('/balance', async (c) => {
+balanceRoute.get('/', async (c) => {
   const wallet = c.req.query('wallet');
   if (!wallet || !isAddress(wallet)) {
     return c.json({ error: 'INVALID_WALLET', message: 'wallet query param must be a valid address' }, 400);

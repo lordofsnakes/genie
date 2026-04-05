@@ -4,7 +4,7 @@ import { executeOnChainTransfer } from '../chain/transfer';
 
 export const confirmRoute = new Hono();
 
-confirmRoute.post('/confirm', async (c) => {
+confirmRoute.post('/', async (c) => {
   try {
     const body = await c.req.json();
     const { txId, userId } = body;

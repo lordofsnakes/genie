@@ -71,10 +71,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const userInfo = await MiniKit.getUserInfo(finalPayload.address);
         const walletAddress = result.siweMessageData.address;
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        let apiUrl = process.env.NEXT_PUBLIC_API_URL;
         if (!apiUrl) {
           console.error('[auth] NEXT_PUBLIC_API_URL is missing in environment');
           return null;
+        }
+
+        // Defensive: Ensure URL has a protocol
+        if (!apiUrl.startsWith('http')) {
+          apiUrl = `https://${apiUrl}`;
         }
 
         console.log(`[auth] provisioning user at: ${apiUrl}/api/users/provision`);

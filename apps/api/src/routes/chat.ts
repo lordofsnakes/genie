@@ -120,12 +120,12 @@ async function fetchUserContext(userId: string): Promise<UserContext> {
 }
 
 /**
- * POST /chat — streaming agent endpoint.
+ * POST /api/chat — streaming agent endpoint.
  *
  * Returns Server-Sent Events via toUIMessageStreamResponse() (not pipeDataStreamToResponse,
  * which is Node.js-only and crashes on Bun/Hono — Pitfall 3 from RESEARCH).
  */
-chatRoute.post('/chat', async (c) => {
+chatRoute.post('/', async (c) => {
   try {
     const body = await c.req.json();
     const { messages, userId } = body;

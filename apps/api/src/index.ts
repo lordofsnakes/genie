@@ -13,11 +13,16 @@ const app = new Hono();
 app.use('*', cors());
 app.use('*', logger());
 app.get('/health', (c) => c.json({ status: 'ok', service: 'genie-api' }));
-app.route('/api', chatRoute);
-app.route('/api', verifyRoute);
-app.route('/api', confirmRoute);
-app.route('/api', usersRoute);
-app.route('/api', balanceRoute);
+app.route('/api/chat', chatRoute);
+app.route('/api/verify', verifyRoute);
+app.route('/api/confirm', confirmRoute);
+app.route('/api/users', usersRoute);
+app.route('/api/balance', balanceRoute);
+
+app.notFound((c) => {
+  console.error(`[genie-api] 404 Not Found: ${c.req.method} ${c.req.url}`);
+  return c.json({ error: 'NOT_FOUND', message: `Route ${c.req.method} ${c.req.url} not found` }, 404);
+});
 
 serve({ fetch: app.fetch, port: PORT });
 console.log(`[genie-api] listening on http://localhost:${PORT}`);

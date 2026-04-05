@@ -11,7 +11,7 @@ const proofSchema = z.object({
   nullifier_hash: z.string().min(1),
 });
 
-verifyRoute.post('/verify', async (c) => {
+verifyRoute.post('/', async (c) => {
   const body = await c.req.json();
   const parsed = proofSchema.safeParse(body);
   if (!parsed.success) {
