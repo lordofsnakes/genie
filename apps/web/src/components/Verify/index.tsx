@@ -14,6 +14,8 @@ export const Verify = () => {
     'pending' | 'success' | 'failed' | undefined
   >(undefined);
 
+  const WORLD_ACTION = process.env.NEXT_PUBLIC_WORLD_ACTION ?? 'verify-human';
+
   const onClickVerify = async () => {
     setButtonState('pending');
     try {
@@ -21,7 +23,7 @@ export const Verify = () => {
       const rpRes = await fetch('/api/rp-signature', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'test-action' }),
+        body: JSON.stringify({ action: WORLD_ACTION }),
       });
 
       if (!rpRes.ok) {
@@ -40,7 +42,7 @@ export const Verify = () => {
       // Use IDKit request API
       const request = await IDKit.request({
         app_id: process.env.NEXT_PUBLIC_APP_ID as `app_${string}`,
-        action: 'test-action',
+        action: WORLD_ACTION,
         rp_context: rpContext,
         allow_legacy_proofs: true,
       }).preset(orbLegacy({ signal: '' }));
@@ -58,7 +60,7 @@ export const Verify = () => {
         method: 'POST',
         body: JSON.stringify({
           payload: completion.result,
-          action: 'test-action',
+          action: WORLD_ACTION,
         }),
       });
 
