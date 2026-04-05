@@ -83,7 +83,7 @@ export default function Onboarding() {
     !!(budget && budget !== '0');
 
   const ctaLabel = step === 0 ? 'Get Started' : step === 1 ? 'Next' : "Let's Go";
-  const ctaAction = step === 2 ? finish : () => goTo(step + 1);
+  const ctaAction = step === 2 ? () => finish(budget) : () => goTo(step + 1);
 
   return (
     <div
