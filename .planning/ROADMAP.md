@@ -195,7 +195,10 @@ Plans:
   2. Destination chain selector: World Chain uses send_usdc, other chains use Circle Bridge Kit (settle_crosschain_debt)
   3. Over-threshold sends show ConfirmCard with working confirm/cancel (fixes /confirm → /api/confirm URL bug)
   4. Under-threshold sends auto-execute and show success
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 12-01-PLAN.md — Backend: bridgeUsdc utility, POST /api/send route, settle_crosschain_debt refactor, tests
+- [ ] 12-02-PLAN.md — Frontend: SendModal rewrite (fetch /api/send), ConfirmCard URL fix, DashboardInterface wiring
 
 ### Phase 13: Recent Transactions
 **Goal**: Dashboard and wallet tab show real transaction history from the database
@@ -248,7 +251,7 @@ Gap closure phases 7-9 run sequentially after all original phases.
 | 9. Confirmation Flow | — | Superseded | → Phase 12 |
 | 10. Onboarding Allowance | 1/1 | Complete    | 2026-04-05 |
 | 11. Live Balance Display | 1/1 | Complete   | 2026-04-05 |
-| 12. Send + Cross-Chain | 0/? | Not started | - |
+| 12. Send + Cross-Chain | 0/2 | Not started | - |
 | 13. Recent Transactions | 0/? | Not started | - |
 | 14. Chat Interface Polish | 0/? | Not started | - |
 | 15. Wallet Tab Completion | 0/? | Not started | - |
