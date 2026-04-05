@@ -30,17 +30,6 @@ vi.mock('./chat', () => ({
   resolveUserId: (...args: unknown[]) => mockResolveUserId(...args),
 }));
 
-// Mock env config
-vi.mock('../config/env', () => ({
-  WORLD_APP_ID: 'app_test123',
-  WORLD_ACTION: 'verify-human',
-  WORLD_VERIFY_API_URL: 'https://developer.world.org/api/v2/verify',
-}));
-
-// Mock global fetch for World ID portal
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
-
 // Import after mocks are set up
 const { verifyRoute } = await import('./verify');
 
@@ -49,21 +38,17 @@ app.route('/', verifyRoute);
 
 const validBody = {
   userId: '00000000-0000-0000-0000-000000000001',
-  proof: '0xproof',
-  merkle_root: '0xroot',
   nullifier_hash: '0xnull123',
-  verification_level: 'orb',
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockSet.mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) });
-  // By default, resolveUserId returns the same UUID passed in
   mockResolveUserId.mockResolvedValue(validBody.userId);
 });
 
 describe('POST /verify', () => {
-  it('returns 400 INVALID_INPUT when proof field missing', async () => {
+  it('returns 400 INVALID_INPUT when nullifier_hash missing', async () => {
     const body = { userId: '00000000-0000-0000-0000-000000000001' };
     const req = new Request('http://localhost/verify', {
       method: 'POST',
@@ -102,29 +87,8 @@ describe('POST /verify', () => {
     expect(json.error).toBe('ALREADY_VERIFIED');
   });
 
-  it('returns 400 VERIFICATION_FAILED when portal rejects proof', async () => {
-    mockSelect.mockResolvedValue([{ worldId: null }]);
-    mockFetch.mockResolvedValue({
-      ok: false,
-      json: async () => ({ code: 'invalid_proof', detail: 'Proof is invalid' }),
-    });
-    const req = new Request('http://localhost/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(validBody),
-    });
-    const res = await app.fetch(req);
-    expect(res.status).toBe(400);
-    const json = await res.json() as { error: string };
-    expect(json.error).toBe('VERIFICATION_FAILED');
-  });
-
   it('returns success, stores nullifier, invalidates cache on valid proof', async () => {
     mockSelect.mockResolvedValue([{ worldId: null }]);
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, nullifier_hash: '0xnull123' }),
-    });
     const req = new Request('http://localhost/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -136,26 +100,5 @@ describe('POST /verify', () => {
     expect(json.success).toBe(true);
     expect(mockSet).toHaveBeenCalledWith({ worldId: '0xnull123' });
     expect(mockInvalidate).toHaveBeenCalledWith(validBody.userId);
-  });
-
-  it('calls portal at correct URL with action merged', async () => {
-    mockSelect.mockResolvedValue([{ worldId: null }]);
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, nullifier_hash: '0xnull123' }),
-    });
-    const req = new Request('http://localhost/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(validBody),
-    });
-    await app.fetch(req);
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://developer.world.org/api/v2/verify/app_test123',
-      expect.objectContaining({
-        method: 'POST',
-        body: expect.stringContaining('"action":"verify-human"'),
-      }),
-    );
   });
 });

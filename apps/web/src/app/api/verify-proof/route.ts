@@ -42,17 +42,13 @@ export async function POST(req: NextRequest) {
         const session = await auth();
         const userId = session?.user?.id;
 
-        // Send the full proof payload so the backend can validate against World ID Cloud API
-        // Backend proofSchema requires: userId, proof, merkle_root, nullifier_hash, verification_level
+        // D-02: BFF already validated with World ID Cloud API — send only slim payload to backend
         await fetch(`${apiUrl}/api/verify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId,
-            proof: (payload as Record<string, unknown>).proof,
-            merkle_root: (payload as Record<string, unknown>).merkle_root,
             nullifier_hash: (payload as Record<string, unknown>).nullifier_hash,
-            verification_level: (payload as Record<string, unknown>).verification_level ?? 'orb',
           }),
         });
         console.log('[verify-proof] persisted to Genie backend');

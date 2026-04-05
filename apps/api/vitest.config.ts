@@ -14,6 +14,9 @@ export default defineConfig({
       RELAYER_PRIVATE_KEY: '0x0000000000000000000000000000000000000000000000000000000000000001',
       WORLD_CHAIN_RPC_URL: 'http://localhost:8545',
       WORLD_CHAIN_TESTNET: 'true',
+      WORLD_APP_ID: 'app_test123',
+      WORLD_ACTION: 'verify-human',
+      WORLD_VERIFY_API_URL: 'https://developer.world.org/api/v2/verify',
     },
   },
 });

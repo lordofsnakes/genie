@@ -1,3 +1,4 @@
+import { auth } from '@/auth';
 import { signRequest } from '@worldcoin/idkit';
 import { NextResponse } from 'next/server';
 
@@ -7,6 +8,12 @@ const SIGNING_KEY = process.env.RP_SIGNING_KEY;
 const RP_ID = process.env.RP_ID ?? 'rp_e87d44dbb7b76d91';
 
 export async function POST(req: Request) {
+  // D-11: Only authenticated users can request RP signatures
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   if (!SIGNING_KEY) {
     return NextResponse.json(
       { error: 'RP_SIGNING_KEY not configured' },
