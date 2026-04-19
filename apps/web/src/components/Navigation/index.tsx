@@ -45,20 +45,26 @@ const PATH_TO_TAB: Record<string, string> = {
 export const Navigation = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const activeTab = PATH_TO_TAB[pathname] ?? 'home';
+  const routeTab = PATH_TO_TAB[pathname] ?? 'home';
+  const [optimisticTab, setOptimisticTab] = useState(routeTab);
+  const activeTab = optimisticTab;
   const activeIndex = TABS.findIndex((t) => t.value === activeTab);
-  const [pendingTab, setPendingTab] = useState<string | null>(null);
 
-  // Clear spinner once the route has settled to the destination
   useEffect(() => {
-    setPendingTab(null);
-  }, [pathname]);
+    for (const tab of TABS) {
+      router.prefetch(tab.route);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    setOptimisticTab(routeTab);
+  }, [routeTab]);
 
   const indicatorLeftPct = ((activeIndex * 2 + 1) / (TABS.length * 2)) * 100;
 
   const handleTabPress = (tab: (typeof TABS)[number]) => {
-    if (tab.value === activeTab || pendingTab === tab.value) return;
-    setPendingTab(tab.value);
+    if (tab.value === activeTab) return;
+    setOptimisticTab(tab.value);
     router.push(tab.route);
   };
 
@@ -75,7 +81,6 @@ export const Navigation = () => {
 
       {TABS.map((tab) => {
         const isActive = activeTab === tab.value;
-        const isLoading = pendingTab === tab.value;
 
         return (
           <button
@@ -84,19 +89,10 @@ export const Navigation = () => {
             className="flex flex-col items-center justify-center gap-1 w-1/3 py-1 transition-all duration-150 active:scale-95"
             aria-label={tab.label}
           >
-            <span className={isActive || isLoading ? 'text-[#CCFF00]' : 'text-white/40'}>
-              {isLoading ? (
-                <span
-                  className="block w-5 h-5 rounded-full border-2 border-transparent animate-spin"
-                  style={{ borderTopColor: '#ccff00', borderRightColor: 'rgba(204,255,0,0.2)' }}
-                />
-              ) : (
-                tab.icon
-              )}
-            </span>
+            <span className={isActive ? 'text-[#CCFF00]' : 'text-white/40'}>{tab.icon}</span>
             <span
               className={`text-[10px] font-bold uppercase tracking-widest transition-colors duration-200 ${
-                isActive || isLoading ? 'text-[#CCFF00]' : 'text-white/40'
+                isActive ? 'text-[#CCFF00]' : 'text-white/40'
               }`}
             >
               {tab.label}

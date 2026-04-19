@@ -1,6 +1,13 @@
 'use client';
 
 import { ConfirmCard, type ConfirmCardData } from '@/components/ConfirmCard';
+import {
+  executeMiniKitTransactions,
+  extractMiniKitTransactionHash,
+  isWalletTransactionRequiredResponse,
+  worldChainReceiptClient,
+} from '@/lib/minikit';
+import { useUserOperationReceipt } from '@worldcoin/minikit-react';
 import { useEffect, useState } from 'react';
 
 type ChainOption = 'World Chain' | 'Base' | 'Arbitrum' | 'Ethereum' | 'Optimism';
@@ -26,6 +33,8 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [selectedChain, setSelectedChain] = useState<ChainOption>('World Chain');
   const [confirmData, setConfirmData] = useState<ConfirmCardData | null>(null);
+  const [errorMessage, setErrorMessage] = useState('');
+  const { poll, isLoading } = useUserOperationReceipt({ client: worldChainReceiptClient });
 
   useEffect(() => {
     const t = requestAnimationFrame(() => setVisible(true));
@@ -42,27 +51,58 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
     setTimeout(onClose, 220);
   };
 
+  const submitSend = async () => {
+    return fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        recipient: recipient.trim(),
+        amount: parseFloat(amount),
+        chain: selectedChain,
+      }),
+    });
+  };
+
   const handleSend = async () => {
     if (!recipient.trim() || !amount || parseFloat(amount) <= 0) return;
+    setErrorMessage('');
     setStatus('sending');
+
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          recipient: recipient.trim(),
-          amount: parseFloat(amount),
-          chain: selectedChain,
-        }),
-      });
-      const json = await res.json();
+      let res = await submitSend();
+      let json = await res.json();
+
       if (!res.ok) {
+        setErrorMessage(json.message ?? json.error ?? 'Transaction failed. Try again.');
         setStatus('error');
         setTimeout(() => setStatus('idle'), 2500);
         return;
       }
-      if (json.type === 'transfer_complete') {
+
+      if (isWalletTransactionRequiredResponse(json)) {
+        const { userOpHash } = await executeMiniKitTransactions(json.txPlan);
+        const receipt = await poll(userOpHash);
+        const finalHash = extractMiniKitTransactionHash(receipt) ?? userOpHash;
+
+        const finalizeRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/confirm`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ txId: json.txId, userId, txHash: finalHash }),
+        });
+        const finalizeJson = await finalizeRes.json();
+
+        if (!finalizeRes.ok && finalizeRes.status !== 409) {
+          setErrorMessage(finalizeJson.message ?? finalizeJson.error ?? 'Transaction failed. Try again.');
+          setStatus('error');
+          setTimeout(() => setStatus('idle'), 2500);
+          return;
+        }
+
+        setStatus('success');
+        refetchBalance?.();
+        setTimeout(handleClose, 1500);
+      } else if (json.type === 'transfer_complete') {
         setStatus('success');
         refetchBalance?.();
         setTimeout(handleClose, 1500);
@@ -74,13 +114,14 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
         setConfirmData(json as ConfirmCardData);
         setStatus('idle');
       }
-    } catch {
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Transaction failed. Try again.');
       setStatus('error');
       setTimeout(() => setStatus('idle'), 2500);
     }
   };
 
-  const canSend = recipient.trim().length > 0 && parseFloat(amount) > 0 && status === 'idle';
+  const canSend = recipient.trim().length > 0 && parseFloat(amount) > 0 && status === 'idle' && !isLoading;
 
   return (
     <div
@@ -207,6 +248,12 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
               </div>
             </div>
 
+            {selectedChain === 'World Chain' && (
+              <p className="text-[11px] text-white/45 leading-relaxed">
+                World Chain sends now open a wallet transaction prompt for the bundled Permit2 approval and transfer.
+              </p>
+            )}
+
             {/* Status message */}
             {status === 'success' && selectedChain === 'World Chain' && (
               <p className="text-xs text-accent text-center font-headline font-bold uppercase tracking-widest">
@@ -220,10 +267,9 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
             )}
             {status === 'error' && (
               <p className="text-xs text-red-400 text-center font-headline font-bold uppercase tracking-widest">
-                Transaction failed. Try again.
+                {errorMessage || 'Transaction failed. Try again.'}
               </p>
             )}
-
             {/* CTA */}
             <button
               onClick={handleSend}

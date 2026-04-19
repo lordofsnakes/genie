@@ -1,6 +1,8 @@
 'use client';
 import { MiniKit } from '@worldcoin/minikit-js';
 import { Tokens, tokenToDecimals } from '@worldcoin/minikit-js/commands';
+import { createPublicClient, http } from 'viem';
+import { worldchain } from 'viem/chains';
 
 function createMiniKitNonce(): string {
   return crypto.randomUUID().replace(/-/g, '');
@@ -114,3 +116,104 @@ export async function triggerWalletSign(nonce?: string): Promise<{
     return null;
   }
 }
+
+export type WalletTransactionPlan = {
+  chainId: number;
+  permit2: {
+    address: `0x${string}`;
+    token: `0x${string}`;
+    spender: `0x${string}`;
+    amount: string;
+    expiration: number;
+  };
+  transactions: Array<{
+    to: `0x${string}`;
+    data: `0x${string}`;
+    value?: `0x${string}`;
+  }>;
+  amountRaw: string;
+  recipient: `0x${string}`;
+};
+
+export type WalletTransactionRequiredResponse = {
+  type: 'wallet_transaction_required';
+  txId: string;
+  amount: number;
+  recipient: string;
+  expiresInMinutes: number;
+  requiresExplicitConfirmation: boolean;
+  txPlan: WalletTransactionPlan;
+};
+
+export function isWalletTransactionRequiredResponse(
+  value: unknown,
+): value is WalletTransactionRequiredResponse {
+  if (!value || typeof value !== 'object') return false;
+
+  const candidate = value as Partial<WalletTransactionRequiredResponse>;
+  return (
+    candidate.type === 'wallet_transaction_required'
+    && typeof candidate.txId === 'string'
+    && !!candidate.txPlan
+    && Array.isArray(candidate.txPlan.transactions)
+  );
+}
+
+function extractHashFromUnknown(value: unknown): string | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+
+  const candidate = value as Record<string, unknown>;
+  const directKeys = ['transactionHash', 'txHash', 'userOpHash', 'hash'];
+  for (const key of directKeys) {
+    const hash = candidate[key];
+    if (typeof hash === 'string' && hash.startsWith('0x')) {
+      return hash;
+    }
+  }
+
+  const nestedKeys = ['receipt', 'transactionReceipt', 'data', 'result'];
+  for (const key of nestedKeys) {
+    const nested = extractHashFromUnknown(candidate[key]);
+    if (nested) return nested;
+  }
+
+  return undefined;
+}
+
+export function extractMiniKitTransactionHash(value: unknown): string | undefined {
+  return extractHashFromUnknown(value);
+}
+
+export async function executeMiniKitTransactions(txPlan: WalletTransactionPlan): Promise<{
+  userOpHash: string;
+}> {
+  if (!MiniKit.isInstalled()) {
+    throw new Error('World App is required to approve this transfer');
+  }
+
+  let result;
+  try {
+    result = await MiniKit.sendTransaction({
+      chainId: txPlan.chainId,
+      transactions: txPlan.transactions,
+    });
+  } catch (err) {
+    console.error('[minikit] sendTransaction failed', err);
+    if (typeof err === 'object' && err !== null && 'details' in err) {
+      console.error('[minikit] sendTransaction error details', (err as { details?: unknown }).details);
+    }
+    throw err;
+  }
+
+  const userOpHash = extractMiniKitTransactionHash(result?.data);
+  if (!userOpHash) {
+    throw new Error('World App did not return a transaction identifier');
+  }
+
+  return { userOpHash };
+}
+
+export const worldChainReceiptClient = createPublicClient({
+  chain: worldchain,
+  transport: http(process.env.NEXT_PUBLIC_WORLD_CHAIN_RPC_URL!),
+});

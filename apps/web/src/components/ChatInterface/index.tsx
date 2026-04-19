@@ -3,9 +3,18 @@
 import { useChat } from '@ai-sdk/react';
 import { TextStreamChatTransport } from 'ai';
 import { MiniKit } from '@worldcoin/minikit-js';
+import { useUserOperationReceipt } from '@worldcoin/minikit-react';
 import { useSession } from 'next-auth/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { triggerMiniKitPay, requestMiniKitPermissions } from '@/lib/minikit';
+import {
+  executeMiniKitTransactions,
+  extractMiniKitTransactionHash,
+  isWalletTransactionRequiredResponse,
+  requestMiniKitPermissions,
+  triggerMiniKitPay,
+  type WalletTransactionRequiredResponse,
+  worldChainReceiptClient,
+} from '@/lib/minikit';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ContactList, parseContactList, type ContactData } from '../ContactCard';
@@ -18,9 +27,11 @@ export interface AiInsight {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
+const SHOW_CHAT_DEBUG = process.env.NEXT_PUBLIC_SHOW_CHAT_DEBUG === 'true';
 
 // Height of the bottom nav bar — input floats above it when keyboard is closed
 const NAV_HEIGHT = 148;
+const COMPOSER_GAP = 12;
 
 const PLACEHOLDERS = [
   'Go off.',
@@ -34,7 +45,8 @@ export const ChatInterface = () => {
   const { data: session } = useSession();
   const [input, setInput] = useState('');
   const [canScroll, setCanScroll] = useState(false);
-  const [inputBottom, setInputBottom] = useState(NAV_HEIGHT);
+  const [inputBottom, setInputBottom] = useState(NAV_HEIGHT + COMPOSER_GAP);
+  const [composerHeight, setComposerHeight] = useState(72);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [lastSendDebug, setLastSendDebug] = useState<string>('idle');
   const [placeholder] = useState(
@@ -42,8 +54,13 @@ export const ChatInterface = () => {
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const permissionsRequested = useRef(false);
+  const handledWalletTxIds = useRef<Set<string>>(new Set());
+  const [walletExecutionState, setWalletExecutionState] = useState<Record<string, 'pending' | 'success' | 'error'>>({});
+  const [walletExecutionError, setWalletExecutionError] = useState<Record<string, string>>({});
 
   const transport = useMemo(
     () => new TextStreamChatTransport({ api: `${API_URL}/api/chat` }),
@@ -59,8 +76,18 @@ export const ChatInterface = () => {
       console.log('[chat] assistant message finished:', message);
     },
   });
+  const { poll } = useUserOperationReceipt({ client: worldChainReceiptClient });
 
   const isThinking = status === 'submitted';
+
+  const scrollChatToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    const container = scrollRef.current;
+    if (!container) return;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior,
+    });
+  };
 
   // Hide nav when keyboard is open
   useEffect(() => {
@@ -82,11 +109,12 @@ export const ChatInterface = () => {
       const kbHeight = window.innerHeight - vv.height - vv.offsetTop;
       const isOpen = kbHeight > 50;
       setKeyboardOpen(isOpen);
-      setInputBottom(isOpen ? kbHeight + 8 : NAV_HEIGHT);
-      // When keyboard opens, reset scroll so first message stays visible
-      if (isOpen && scrollRef.current) {
-        const el = scrollRef.current;
-        if (el.scrollHeight <= el.clientHeight + 50) el.scrollTop = 0;
+      setInputBottom(isOpen ? kbHeight + COMPOSER_GAP : NAV_HEIGHT + COMPOSER_GAP);
+      // When keyboard opens, keep the latest messages visible above the composer.
+      if (isOpen) {
+        requestAnimationFrame(() => scrollChatToBottom('auto'));
+        setTimeout(() => scrollChatToBottom('auto'), 80);
+        setTimeout(() => scrollChatToBottom('smooth'), 180);
       }
       if (!isOpen) {
         const reset = () => {
@@ -110,17 +138,49 @@ export const ChatInterface = () => {
   // Only allow scroll when content overflows
   useEffect(() => {
     const el = scrollRef.current;
+    const content = contentRef.current;
     if (!el) return;
-    const check = () => setCanScroll(el.scrollHeight > el.clientHeight);
+    const check = () => setCanScroll(el.scrollHeight > el.clientHeight + 8);
     check();
     const ro = new ResizeObserver(check);
     ro.observe(el);
-    return () => ro.disconnect();
+    if (content) {
+      ro.observe(content);
+    }
+    window.addEventListener('resize', check);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', check);
+    };
   }, []);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const composer = composerRef.current;
+    if (!composer) return;
+
+    const updateComposerHeight = () => {
+      setComposerHeight(composer.getBoundingClientRect().height);
+    };
+
+    updateComposerHeight();
+    const ro = new ResizeObserver(updateComposerHeight);
+    ro.observe(composer);
+    window.addEventListener('resize', updateComposerHeight);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', updateComposerHeight);
+    };
+  }, []);
+
+  useEffect(() => {
+    scrollChatToBottom('smooth');
   }, [messages, status]);
+
+  useEffect(() => {
+    if (!keyboardOpen) return;
+    scrollChatToBottom('smooth');
+  }, [keyboardOpen, composerHeight]);
 
   // Detect payment confirmation messages from agent and trigger MiniKit Pay
   useEffect(() => {
@@ -153,6 +213,56 @@ export const ChatInterface = () => {
       }
     } catch { /* not valid JSON — ignore */ }
   }, [messages]);
+
+  useEffect(() => {
+    if (messages.length === 0 || !session?.user?.id) return;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.role !== 'assistant') return;
+
+    const textContent = lastMsg.parts
+      ?.filter((p: { type: string }) => p.type === 'text')
+      .map((p: { type: string; text?: string }) => p.text ?? '')
+      .join('');
+
+    const walletTxData = parseWalletTransactionRequired(textContent);
+    if (!walletTxData) return;
+    if (walletTxData.requiresExplicitConfirmation) return;
+    if (handledWalletTxIds.current.has(walletTxData.txId)) return;
+
+    handledWalletTxIds.current.add(walletTxData.txId);
+    setWalletExecutionState((current) => ({ ...current, [walletTxData.txId]: 'pending' }));
+
+    executeMiniKitTransactions(walletTxData.txPlan)
+      .then(async ({ userOpHash }) => {
+        const receipt = await poll(userOpHash);
+        const finalHash = extractMiniKitTransactionHash(receipt) ?? userOpHash;
+
+        const finalizeRes = await fetch(`${API_URL}/api/confirm`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            txId: walletTxData.txId,
+            userId: session.user.id,
+            txHash: finalHash,
+          }),
+        });
+        const finalizeJson = await finalizeRes.json();
+
+        if (!finalizeRes.ok && finalizeRes.status !== 409) {
+          throw new Error(finalizeJson.message ?? finalizeJson.error ?? 'Transfer failed');
+        }
+
+        setWalletExecutionState((current) => ({ ...current, [walletTxData.txId]: 'success' }));
+      })
+      .catch((err) => {
+        console.error('[chat] wallet transaction failed', err);
+        setWalletExecutionState((current) => ({ ...current, [walletTxData.txId]: 'error' }));
+        setWalletExecutionError((current) => ({
+          ...current,
+          [walletTxData.txId]: err instanceof Error ? err.message : 'Transfer failed',
+        }));
+      });
+  }, [messages, poll, session?.user?.id]);
 
   const handleSend = async () => {
     if (!input.trim() || (status !== 'ready' && status !== 'error')) return;
@@ -210,12 +320,12 @@ export const ChatInterface = () => {
         ref={scrollRef}
         className="flex-1 min-h-0 overscroll-contain pt-6 px-6"
         style={{
-          paddingBottom: `${NAV_HEIGHT + 72}px`,
-          overflowY: keyboardOpen ? 'hidden' : 'auto',
-          touchAction: keyboardOpen || !canScroll ? 'none' : 'pan-y',
+          paddingBottom: `${inputBottom + composerHeight + 24}px`,
+          overflowY: 'auto',
+          touchAction: canScroll ? 'pan-y' : 'none',
         }}
       >
-        <div className="flex flex-col gap-10 max-w-md mx-auto">
+        <div ref={contentRef} className="flex flex-col gap-10 max-w-md mx-auto">
           {messages.length === 0 && <EmptyState />}
           {messages.map((message) =>
             message.role === 'user' ? (
@@ -225,6 +335,8 @@ export const ChatInterface = () => {
                 key={message.id}
                 parts={message.parts}
                 userId={session?.user?.id ?? ''}
+                walletExecutionState={walletExecutionState}
+                walletExecutionError={walletExecutionError}
                 onContactSelect={(contact: ContactData) => {
                   if (status !== 'ready') return;
                   sendMessage(
@@ -250,11 +362,16 @@ export const ChatInterface = () => {
 
       {/* Input — fixed so it floats above nav bar, then above keyboard when open */}
       <div
+        ref={composerRef}
         className="fixed left-0 w-full px-6 z-50 transition-[bottom] duration-100"
-        style={{ bottom: inputBottom, touchAction: 'none' }}
+        style={{
+          bottom: inputBottom,
+          touchAction: 'none',
+          paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
+        }}
       >
         <div className="max-w-md mx-auto">
-          {process.env.NEXT_PUBLIC_APP_ENV !== 'production' && (
+          {SHOW_CHAT_DEBUG && (
             <div className="mb-2 rounded-lg bg-black/80 px-3 py-2 text-[10px] leading-snug text-white/70 font-mono break-words">
               <div>chat status: {status}</div>
               <div>api: {API_URL || 'same-origin'}/api/chat</div>
@@ -286,6 +403,12 @@ export const ChatInterface = () => {
               rows={1}
               value={input}
               onChange={handleTextareaInput}
+              onFocus={() => {
+                requestAnimationFrame(() => {
+                  scrollChatToBottom('auto');
+                });
+                setTimeout(() => scrollChatToBottom('smooth'), 120);
+              }}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
               className="flex-1 bg-transparent border-none focus:ring-0 px-4 py-2 placeholder:text-white/30 text-white outline-none resize-none overflow-y-auto leading-relaxed"
@@ -372,10 +495,14 @@ function AiMessageBubble({
   parts,
   onContactSelect,
   userId,
+  walletExecutionState,
+  walletExecutionError,
 }: {
   parts: Array<{ type: string; text?: string }>;
   onContactSelect: (contact: ContactData) => void;
   userId: string;
+  walletExecutionState: Record<string, 'pending' | 'success' | 'error'>;
+  walletExecutionError: Record<string, string>;
 }) {
   const textContent = parts
     .filter((p) => p.type === 'text')
@@ -384,8 +511,9 @@ function AiMessageBubble({
 
   const contactData = parseContactList(textContent);
   const confirmData = parseConfirmCard(textContent);
+  const walletTxData = parseWalletTransactionRequired(textContent);
 
-  const markdownText = (contactData || confirmData)
+  const markdownText = (contactData || confirmData || walletTxData)
     ? textContent.replace(/```json\s*\n[\s\S]*?\n```/g, '').trim()
     : textContent;
 
@@ -451,11 +579,74 @@ function AiMessageBubble({
             </ReactMarkdown>
           )}
           {contactData && <ContactList data={contactData} onSelect={onContactSelect} />}
+          {walletTxData && !walletTxData.requiresExplicitConfirmation && (
+            <WalletExecutionCard
+              data={walletTxData}
+              state={walletExecutionState[walletTxData.txId] ?? 'pending'}
+              error={walletExecutionError[walletTxData.txId]}
+            />
+          )}
           {confirmData && (
             <ConfirmCard data={confirmData} userId={userId} />
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function parseWalletTransactionRequired(text: string): WalletTransactionRequiredResponse | null {
+  const matches = text.matchAll(/```json\s*\n([\s\S]*?)\n```/g);
+  for (const match of matches) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      if (isWalletTransactionRequiredResponse(parsed)) {
+        return parsed;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+function WalletExecutionCard({
+  data,
+  state,
+  error,
+}: {
+  data: WalletTransactionRequiredResponse;
+  state: 'pending' | 'success' | 'error';
+  error?: string;
+}) {
+  if (state === 'success') {
+    return (
+      <div className="mt-3 bg-background border border-white/10 p-4 rounded-xl">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="material-symbols-outlined text-accent text-base" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+          <p className="text-sm font-bold text-white">Sent ${data.amount} USDC</p>
+        </div>
+        <p className="text-xs text-white/45">Wallet transaction completed.</p>
+      </div>
+    );
+  }
+
+  if (state === 'error') {
+    return (
+      <div className="mt-3 bg-background border border-red-500/20 p-4 rounded-xl">
+        <p className="text-sm font-bold text-red-400 mb-1">Wallet transaction failed</p>
+        <p className="text-xs text-white/60">{error ?? 'Transfer failed'}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 bg-background border border-white/10 p-4 rounded-xl">
+      <p className="text-sm font-bold text-white mb-1">Opening World App wallet...</p>
+      <p className="text-xs text-white/50">
+        Approve the bundled Permit2 approval and transfer for ${data.amount} USDC.
+      </p>
     </div>
   );
 }

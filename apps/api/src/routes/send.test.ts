@@ -41,16 +41,13 @@ vi.mock('@genie/db', async (importOriginal) => {
   };
 });
 
-// Mock executeOnChainTransfer
-const mockExecuteTransfer = vi.fn();
+// Mock prepareOnChainTransfer
+const mockPrepareTransfer = vi.fn();
 vi.mock('../chain/transfer', () => ({
-  executeOnChainTransfer: (...args: unknown[]) => mockExecuteTransfer(...args),
+  prepareOnChainTransfer: (...args: unknown[]) => mockPrepareTransfer(...args),
 }));
 
-// Mock bridgeUsdc
-const mockBridgeUsdc = vi.fn();
 vi.mock('../chain/bridge', () => ({
-  bridgeUsdc: (...args: unknown[]) => mockBridgeUsdc(...args),
   CCTP_DOMAIN_IDS: { ethereum: 0, optimism: 2, arbitrum: 3, base: 6 },
 }));
 
@@ -96,21 +93,26 @@ beforeEach(() => {
   mockDbInsertReturning.mockResolvedValue([{ id: 'tx-new-id' }]);
   // Default DB update resolves
   mockDbUpdate.mockResolvedValue([]);
-  // Default transfer success
-  mockExecuteTransfer.mockResolvedValue({
-    routeTxHash: '0xrouteHash',
-    executeTxHash: '0xexecHash',
-  });
-  // Default bridge success
-  mockBridgeUsdc.mockResolvedValue({
-    routeTxHash: '0xrouteHash',
-    approveTxHash: '0xapproveHash',
-    bridgeTxHash: '0xbridgeHash',
+  mockPrepareTransfer.mockReturnValue({
+    chainId: 480,
+    permit2: {
+      address: '0xPermit2',
+      token: '0xUSDC',
+      spender: '0xRouter',
+      amount: '10000000',
+      expiration: 0,
+    },
+    transactions: [
+      { to: '0xPermit2', data: '0xapprove' },
+      { to: '0xRouter', data: '0xroute' },
+    ],
+    amountRaw: '10000000',
+    recipient: VALID_RECIPIENT,
   });
 });
 
 describe('POST /send', () => {
-  it('Test 1: World Chain under-threshold returns 200 transfer_complete', async () => {
+  it('Test 1: World Chain under-threshold returns 200 wallet_transaction_required', async () => {
     const res = await app.fetch(makeRequest({
       userId: VALID_USER_ID,
       recipient: VALID_RECIPIENT,
@@ -119,15 +121,13 @@ describe('POST /send', () => {
     }));
     expect(res.status).toBe(200);
     const json = await res.json() as Record<string, unknown>;
-    expect(json.type).toBe('transfer_complete');
-    expect(json.txHash).toBe('0xexecHash');
+    expect(json.type).toBe('wallet_transaction_required');
+    expect(json.txId).toBeDefined();
     expect(json.amount).toBe(10);
     expect(json.recipient).toBe(VALID_RECIPIENT);
-    expect(mockExecuteTransfer).toHaveBeenCalledWith(
-      VERIFIED_USER.walletAddress,
-      VALID_RECIPIENT,
-      10,
-    );
+    expect(json.requiresExplicitConfirmation).toBe(false);
+    expect(json.txPlan).toBeDefined();
+    expect(mockPrepareTransfer).toHaveBeenCalledWith(VALID_RECIPIENT, 10);
   });
 
   it('Test 2: World Chain over-threshold returns 200 confirmation_required', async () => {
@@ -144,25 +144,19 @@ describe('POST /send', () => {
     expect(json.amount).toBe(100);
     expect(json.recipient).toBe(VALID_RECIPIENT);
     expect(json.expiresInMinutes).toBe(15);
-    expect(mockExecuteTransfer).not.toHaveBeenCalled();
+    expect(mockPrepareTransfer).not.toHaveBeenCalled();
   });
 
-  it('Test 3: cross-chain (Base) calls bridgeUsdc and returns 200 bridge_initiated', async () => {
+  it('Test 3: cross-chain (Base) returns 501 bridge not ready', async () => {
     const res = await app.fetch(makeRequest({
       userId: VALID_USER_ID,
       recipient: VALID_RECIPIENT,
       amount: 50,
       chain: 'Base',
     }));
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(501);
     const json = await res.json() as Record<string, unknown>;
-    expect(json.type).toBe('bridge_initiated');
-    expect(json.bridgeTxHash).toBe('0xbridgeHash');
-    expect(json.amount).toBe(50);
-    expect(json.recipient).toBe(VALID_RECIPIENT);
-    expect(mockBridgeUsdc).toHaveBeenCalledWith(
-      expect.objectContaining({ destinationChain: 'base', amountUsd: 50 }),
-    );
+    expect(json.error).toBe('PERMIT2_BRIDGE_NOT_READY');
   });
 
   it('Test 4: invalid recipient (not 0x address) returns 400', async () => {
@@ -199,5 +193,18 @@ describe('POST /send', () => {
     expect(res.status).toBe(400);
     const json = await res.json() as Record<string, unknown>;
     expect(typeof json.error).toBe('string');
+  });
+
+  it('Test 7: same-chain under-threshold still succeeds without permit payload because backend now prepares a wallet tx plan', async () => {
+    const res = await app.fetch(makeRequest({
+      userId: VALID_USER_ID,
+      recipient: VALID_RECIPIENT,
+      amount: 10,
+      chain: 'World Chain',
+    }));
+    expect(res.status).toBe(200);
+    const json = await res.json() as Record<string, unknown>;
+    expect(json.type).toBe('wallet_transaction_required');
+    expect(mockPrepareTransfer).toHaveBeenCalled();
   });
 });

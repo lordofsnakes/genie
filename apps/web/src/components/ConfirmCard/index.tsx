@@ -1,5 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
+import {
+  executeMiniKitTransactions,
+  extractMiniKitTransactionHash,
+  isWalletTransactionRequiredResponse,
+  worldChainReceiptClient,
+} from '@/lib/minikit';
+import { useUserOperationReceipt } from '@worldcoin/minikit-react';
 
 export interface ConfirmCardData {
   type: 'confirmation_required';
@@ -11,14 +18,15 @@ export interface ConfirmCardData {
 }
 
 export function parseConfirmCard(text: string): ConfirmCardData | null {
-  const jsonMatch = text.match(/```json\s*\n([\s\S]*?)\n```/);
-  if (!jsonMatch) return null;
-  try {
-    const parsed = JSON.parse(jsonMatch[1]);
-    if (parsed.type === 'confirmation_required' && parsed.txId && parsed.amount) {
-      return parsed as ConfirmCardData;
-    }
-  } catch { /* not valid JSON, render as markdown */ }
+  const matches = text.matchAll(/```json\s*\n([\s\S]*?)\n```/g);
+  for (const match of matches) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      if (parsed.type === 'confirmation_required' && parsed.txId && parsed.amount) {
+        return parsed as ConfirmCardData;
+      }
+    } catch { /* not valid JSON, render as markdown */ }
+  }
   return null;
 }
 
@@ -31,6 +39,7 @@ export const ConfirmCard: React.FC<{ data: ConfirmCardData; userId: string }> = 
   const [secondsLeft, setSecondsLeft] = useState(data.expiresInMinutes * 60);
   const [txHash, setTxHash] = useState('');
   const [error, setError] = useState('');
+  const { poll, isLoading } = useUserOperationReceipt({ client: worldChainReceiptClient });
 
   useEffect(() => {
     if (state !== 'idle') return;
@@ -48,26 +57,58 @@ export const ConfirmCard: React.FC<{ data: ConfirmCardData; userId: string }> = 
   const handleConfirm = async () => {
     setState('loading');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/confirm`, {
+      const prepareRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ txId: data.txId, userId }),
       });
-      const json = await res.json();
-      if (res.ok) {
+
+      const prepareJson = await prepareRes.json();
+      if (prepareRes.status === 409) {
         setState('confirmed');
-        setTxHash(json.txHash ?? '');
-      } else if (res.status === 409) {
-        setState('confirmed');
-        setTxHash(json.txHash ?? '');
-      } else if (res.status === 410) {
-        setState('expired');
-      } else {
-        setError(json.message ?? json.error ?? 'Transfer failed');
-        setState('error');
+        setTxHash(prepareJson.txHash ?? '');
+        return;
       }
-    } catch {
-      setError('Network error - please try again');
+      if (prepareRes.status === 410) {
+        setState('expired');
+        return;
+      }
+      if (!prepareRes.ok) {
+        setError(prepareJson.message ?? prepareJson.error ?? 'Transfer failed');
+        setState('error');
+        return;
+      }
+
+      if (!isWalletTransactionRequiredResponse(prepareJson)) {
+        throw new Error('Backend did not return a wallet transaction plan');
+      }
+
+      const { userOpHash } = await executeMiniKitTransactions(prepareJson.txPlan);
+      const receipt = await poll(userOpHash);
+      const finalHash = extractMiniKitTransactionHash(receipt) ?? userOpHash;
+
+      const finalizeRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ txId: data.txId, userId, txHash: finalHash }),
+      });
+      const finalizeJson = await finalizeRes.json();
+
+      if (finalizeRes.ok || finalizeRes.status === 409) {
+        setState('confirmed');
+        setTxHash(finalizeJson.txHash ?? finalHash);
+        return;
+      }
+      if (finalizeRes.status === 410) {
+        setState('expired');
+        return;
+      }
+
+      setError(finalizeJson.message ?? finalizeJson.error ?? 'Transfer failed');
+      setState('error');
+    } catch (err) {
+      console.error('[ConfirmCard] confirm failed', err);
+      setError(err instanceof Error ? err.message : 'Network error - please try again');
       setState('error');
     }
   };
@@ -95,21 +136,25 @@ export const ConfirmCard: React.FC<{ data: ConfirmCardData; userId: string }> = 
 
       {/* Recipient */}
       <p className="text-sm text-white/60 mb-4">To: {truncateAddress(displayAddr)}</p>
+      <p className="text-[11px] text-white/40 mb-4 leading-relaxed">
+        Confirming will open a World App wallet transaction for this exact amount.
+      </p>
 
       {/* State-dependent rendering */}
       {state === 'idle' && (
         <>
           <p className="text-white/40 text-xs mb-3">Expires in {countdown}</p>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={handleConfirm}
-              className="bg-accent text-black px-6 py-2.5 text-sm font-bold uppercase tracking-widest rounded-lg"
+              disabled={isLoading}
+              className="min-w-0 bg-accent text-black px-3 py-2.5 text-sm font-bold uppercase tracking-widest rounded-lg"
             >
               Confirm
             </button>
             <button
               onClick={handleCancel}
-              className="border border-white/20 text-white/70 px-6 py-2.5 text-sm rounded-lg"
+              className="min-w-0 border border-white/20 text-white/70 px-3 py-2.5 text-sm rounded-lg"
             >
               Cancel
             </button>
@@ -118,16 +163,16 @@ export const ConfirmCard: React.FC<{ data: ConfirmCardData; userId: string }> = 
       )}
 
       {state === 'loading' && (
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <button
             disabled
-            className="bg-accent text-black px-6 py-2.5 text-sm font-bold uppercase tracking-widest rounded-lg opacity-70 cursor-not-allowed"
+            className="min-w-0 bg-accent text-black px-3 py-2.5 text-sm font-bold uppercase tracking-widest rounded-lg opacity-70 cursor-not-allowed"
           >
             Confirming...
           </button>
           <button
             disabled
-            className="border border-white/20 text-white/70 px-6 py-2.5 text-sm rounded-lg opacity-70 cursor-not-allowed"
+            className="min-w-0 border border-white/20 text-white/70 px-3 py-2.5 text-sm rounded-lg opacity-70 cursor-not-allowed"
           >
             Cancel
           </button>
@@ -157,16 +202,17 @@ export const ConfirmCard: React.FC<{ data: ConfirmCardData; userId: string }> = 
       {state === 'error' && (
         <>
           <p className="text-red-400 text-xs mb-3">{error}</p>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={handleConfirm}
-              className="bg-accent text-black px-6 py-2.5 text-sm font-bold uppercase tracking-widest rounded-lg"
+              disabled={isLoading}
+              className="min-w-0 bg-accent text-black px-3 py-2.5 text-sm font-bold uppercase tracking-widest rounded-lg"
             >
               Retry
             </button>
             <button
               onClick={handleCancel}
-              className="border border-white/20 text-white/70 px-6 py-2.5 text-sm rounded-lg"
+              className="min-w-0 border border-white/20 text-white/70 px-3 py-2.5 text-sm rounded-lg"
             >
               Cancel
             </button>

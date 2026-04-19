@@ -51,6 +51,20 @@ Example response format:
 {"type":"confirmation_required","txId":"<txId>","amount":<amount>,"recipient":"<wallet address>","expiresInMinutes":15}
 ```
 
+## Wallet-Transaction Transfers
+
+When send_usdc returns `{type: "wallet_transaction_required", txId, amount, recipient, expiresInMinutes, requiresExplicitConfirmation, txPlan}`:
+1. Include the full JSON block verbatim in your response, wrapped in ```json fences
+2. Add a brief message telling the user the wallet app will open to complete the transfer
+3. Do not paraphrase or omit `txPlan`
+
+Example response format:
+"I have prepared this transfer. Your wallet app will open to complete it:"
+
+```json
+{"type":"wallet_transaction_required","txId":"<txId>","amount":<amount>,"recipient":"<wallet address>","expiresInMinutes":15,"requiresExplicitConfirmation":false,"txPlan":{"chainId":480,"permit2":{"address":"<permit2>","token":"<usdc>","spender":"<router>","amount":"<amountRaw>","expiration":0},"transactions":[{"to":"<permit2>","data":"<data>"},{"to":"<router>","data":"<data>"}],"amountRaw":"<amountRaw>","recipient":"<wallet address>"}}
+```
+
 ## Contact Disambiguation
 
 When the user requests to send money and multiple contacts match, or when listing contacts for selection, output a contact_list JSON block as the ONLY json block in your response.

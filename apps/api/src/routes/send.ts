@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { isAddress } from 'viem';
 import { db, transactions, users, eq, and } from '@genie/db';
-import { executeOnChainTransfer } from '../chain/transfer';
-import { bridgeUsdc, CCTP_DOMAIN_IDS } from '../chain/bridge';
+import { prepareOnChainTransfer } from '../chain/transfer';
+import { CCTP_DOMAIN_IDS } from '../chain/bridge';
 import { inferCategory } from '../tools/categorize';
 
 export const sendRoute = new Hono();
@@ -11,8 +11,8 @@ const PENDING_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes
 
 /**
  * Chain name mapping — normalizes frontend chain names to CCTP_DOMAIN_IDS keys.
- * null = World Chain (same-chain transfer via executeOnChainTransfer).
- * string = cross-chain destination (bridge via bridgeUsdc).
+ * null = World Chain (same-chain transfer via prepared wallet transaction bundle).
+ * string = cross-chain destination (bridge path still disabled).
  */
 const CHAIN_MAP: Record<string, string | null> = {
   'World Chain': null,
@@ -65,39 +65,36 @@ sendRoute.post('/', async (c) => {
 
     if (destinationChain === null) {
       // World Chain (same-chain) send
-      if (amount <= autoApproveUsd) {
-        // Auto-execute path (FOPS-04)
-        const { routeTxHash, executeTxHash } = await executeOnChainTransfer(
-          user.walletAddress as `0x${string}`,
-          recipient as `0x${string}`,
-          amount,
-        );
+      await db
+        .update(transactions)
+        .set({ status: 'expired' })
+        .where(and(eq(transactions.senderUserId, userId), eq(transactions.status, 'pending')));
 
-        await db.insert(transactions).values({
-          senderUserId: userId,
-          recipientWallet: recipient,
-          amountUsd: amount.toFixed(2),
-          txHash: executeTxHash,
-          status: 'confirmed',
-          executedAt: new Date(),
-          source: 'genie_send',
-          category: inferCategory(description),
-        });
+      if (amount <= autoApproveUsd) {
+        const [pending] = await db
+          .insert(transactions)
+          .values({
+            senderUserId: userId,
+            recipientWallet: recipient,
+            amountUsd: amount.toFixed(2),
+            status: 'pending',
+            expiresAt: new Date(Date.now() + PENDING_EXPIRY_MS),
+            category: inferCategory(description),
+            source: 'genie_send',
+          })
+          .returning();
 
         return c.json({
-          type: 'transfer_complete',
-          txHash: executeTxHash,
-          routeTxHash,
+          type: 'wallet_transaction_required',
+          txId: pending.id,
           amount,
           recipient,
+          expiresInMinutes: 15,
+          requiresExplicitConfirmation: false,
+          txPlan: prepareOnChainTransfer(recipient as `0x${string}`, amount),
         });
       } else {
-        // Confirmation required path (FOPS-05)
-        await db
-          .update(transactions)
-          .set({ status: 'expired' })
-          .where(and(eq(transactions.senderUserId, userId), eq(transactions.status, 'pending')));
-
+        // Explicit in-app confirmation still required for higher amounts
         const [pending] = await db
           .insert(transactions)
           .values({
@@ -121,33 +118,14 @@ sendRoute.post('/', async (c) => {
       }
     } else {
       // Cross-chain send via CCTP bridge
-      const { routeTxHash, bridgeTxHash } = await bridgeUsdc({
-        senderWallet: user.walletAddress as `0x${string}`,
-        amountUsd: amount,
-        destinationChain,
-        recipientWallet: recipient,
-      });
-
-      await db.insert(transactions).values({
-        senderUserId: userId,
-        recipientWallet: recipient,
-        amountUsd: amount.toFixed(2),
-        txHash: bridgeTxHash,
-        status: 'confirmed',
-        executedAt: new Date(),
-        source: 'genie_bridge',
-        category: 'transfers',
-      });
+      if (!(destinationChain in CCTP_DOMAIN_IDS)) {
+        return c.json({ error: 'Unsupported chain' }, 400);
+      }
 
       return c.json({
-        type: 'bridge_initiated',
-        routeTxHash,
-        bridgeTxHash,
-        amount,
-        recipient,
-        destinationChain,
-        estimatedMinutes: 15,
-      });
+        error: 'PERMIT2_BRIDGE_NOT_READY',
+        message: 'Cross-chain sends are temporarily disabled until the Permit2 migration reaches the bridge flow.',
+      }, 501);
     }
   } catch (err) {
     console.error('[route:send] error:', err);

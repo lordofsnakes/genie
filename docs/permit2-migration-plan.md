@@ -1,191 +1,172 @@
 # Permit2 Migration Plan
 
-This document captures the phased migration from the current ERC-20 allowance-based Genie transfer flow to a Permit2-based architecture that is compatible with World App / MiniKit.
+This document tracks the migration from the broken ERC-20 approval flow to a World-supported Permit2 architecture.
 
 ## Context
 
-The current architecture depends on a raw ERC-20 `approve(router, amount)` transaction followed by relayer-side `transferFrom`. That design does not work with the current World App / MiniKit transaction model for this app. The existing checkpoint before this migration is:
+The original allowance-based design depended on raw ERC-20 `approve(router, amount)` and relayer-side `transferFrom`. That path was already invalid for Genie.
 
-- Commit: `4bddc76`
-- Tag: `pre-permit2-approval-checkpoint-2026-04-19`
+We then built an intermediate Permit2 `SignatureTransfer` architecture across:
 
-If the Permit2 migration needs to be abandoned or reworked, use that tag as the rollback point.
+- contracts
+- backend
+- frontend signing prototype
 
-## Target Outcome
+That prototype is now also blocked for the live World App flow.
 
-Replace the broken approval flow with a Permit2-based authorization flow where:
+On April 19, 2026, phone validation of Phase 3 showed:
 
-- the user authorizes a bounded token spend using a supported signature path
-- Genie can only move the exact amount authorized
-- backend execution is tied to a specific payload, nonce, amount, token, and expiry
-- no raw ERC-20 approval is required
+- `MiniKit.signTypedData(...)` returned `disallowed_operation`
 
-## Phase 0: Freeze The Old Path
+So the new target architecture is no longer `SignatureTransfer`. The new target is the World-supported Permit2 allowance-transfer transaction path described in [`permit2-flow-design.md`](./permit2-flow-design.md).
+
+## Checkpoints
+
+- rollback checkpoint before Permit2 work:
+  - commit `4bddc76`
+  - tag `pre-permit2-approval-checkpoint-2026-04-19`
+- migration plan commit:
+  - commit `a4e6b85`
+
+## Current State
+
+### Completed
+
+- Phase 0 freeze of raw approval UX
+- contract/backend work for a Permit2 `SignatureTransfer` model
+- frontend proof-of-concept for `MiniKit.signTypedData(...)`
+
+### Validated Blocker
+
+- World App rejects the `SignatureTransfer` signing path with `disallowed_operation`
+
+### Consequence
+
+- Phase 3 cannot complete on the current `signTypedData + SignatureTransfer` design
+- Phase 1 and Phase 2 are now considered transitional work, not the final architecture
+
+## Updated Target Outcome
+
+Replace the broken approval flow with a MiniKit-supported bundled transaction where:
+
+- the frontend uses `MiniKit.sendTransaction(...)`
+- Permit2 `approve(token, spender, amount, 0)` is executed first
+- Genie contract logic consumes that Permit2 approval immediately in the same transaction
+- Genie sends exactly the intended USDC amount to the intended recipient
+- backend records execution outcome and confirmation state
+
+## Revised Phases
+
+## Phase A: Stop The Broken Signature Path
 
 Goal:
-- stop mixing the old allowance architecture with the new one
+- prevent vague user-facing failures while the architecture pivots
 
 Work:
-- keep `4bddc76` and tag `pre-permit2-approval-checkpoint-2026-04-19` as the rollback point
-- remove or hard-disable the broken approval UX so nobody can continue down the unsupported `approve` flow
-- write down the target flow in one place: user signs a Permit2 authorization in World App, Genie uses that authorization to move exactly the approved amount, and the backend records the result
-- confirm one architectural choice before deeper implementation:
-  - use `SignatureTransfer` for one-time spend authorizations
-  - do not use `AllowanceTransfer`, because the point is to avoid persistent token approvals
+- surface `disallowed_operation` and related World App errors explicitly in the UI
+- document that `MiniKit.signTypedData(...)` is not viable for Genie’s live flow
+- keep the current frontend signing code only as diagnostic scaffolding until the pivot lands
 
 Exit criteria:
-- no live path in the UI attempts raw ERC-20 `approve`
-- there is a short design note defining the new transaction flow end-to-end
+- users no longer see generic “something went wrong” messaging for the blocked signing flow
+- docs reflect the actual platform constraint
 
-## Phase 1: Add Permit2 Contract Support
+## Phase B: Redesign Contracts For Permit2 Allowance Transfer
 
 Goal:
-- make the contracts capable of pulling user USDC via Permit2 instead of ERC-20 allowance
+- replace the transitional `SignatureTransfer` router flow with a contract surface compatible with bundled `sendTransaction(...)`
 
 Work:
-- update `GenieRouter` so it integrates Uniswap Permit2
-- replace `route(sender, amount, handler)` with a Permit2-based entrypoint that accepts:
-  - permit struct
-  - transfer details
-  - user signature
-  - destination handler
-- keep `PayHandler` simple: receive funds and forward to recipient
-- add contract tests for:
-  - valid signature transfers for the exact amount
-  - expired permit rejection
-  - wrong token rejection
-  - wrong spender/router rejection
-  - replay prevention / nonce use
+- redesign `GenieRouter` around Permit2 allowance transfer consumption
+- remove dependence on frontend-signed `PermitTransferFrom` payloads
+- bind recipient and amount in the contract execution path
+- update or replace tests that currently assume `SignatureTransfer`
 
 Exit criteria:
-- local contract tests prove the router can pull USDC with Permit2 and cannot over-pull
+- contracts can consume a Permit2 approval in the same transaction and route exact USDC safely
 
-## Phase 2: Refactor Backend Transfer Orchestration
+## Phase C: Refactor Backend For Bundled Transaction Recording
 
 Goal:
-- make the API and relayer use the new contract entrypoint safely
+- align backend responsibilities with the new frontend-executed transaction model
 
 Work:
-- replace the backend assumption that `allowance(owner, router)` exists
-- update `api/src/chain/transfer.ts` to call the new router method with Permit2 payloads
-- define strict backend types for:
-  - token
-  - amount
-  - nonce
-  - deadline
-  - signature
-  - owner
-  - recipient
-- add validation to reject malformed or mismatched payloads before touching chain
-- preserve transaction recording and logging, but log Permit2-specific identifiers instead of allowance reads
+- remove backend assumptions that it will receive `SignatureTransfer` payloads
+- redefine `/api/send` and `/api/confirm` around:
+  - transaction preparation metadata
+  - pending transaction bookkeeping
+  - post-execution recording
+- keep exact amount and recipient consistency checks in backend state transitions
 
 Exit criteria:
-- backend can execute a transfer using a mocked or test Permit2 payload
-- old allowance checks are removed from the send path
+- backend no longer requires `permitPayload`
+- backend cleanly supports pending and executed Genie transfers under the new transaction model
 
-## Phase 3: Build The Frontend Signing Flow
+## Phase D: Implement Frontend Bundled Transaction Flow
 
 Goal:
-- replace the broken approval overlay with a signature authorization flow the wallet actually supports
+- replace blocked typed-data signing with the World-supported MiniKit transaction path
 
 Work:
-- replace `ApprovalOverlay` with a `PermitOverlay` or equivalent UX
-- explain to the user that they are authorizing a capped spend for a single transfer or bounded action, not sending funds immediately
-- use a World App / MiniKit supported signing flow to collect the Permit2 signature
-- send the signed payload to the backend only after local validation of:
-  - wallet address
-  - amount
-  - expiry
-  - nonce presence
-- make failures explicit:
-  - user rejected
-  - signature invalid
-  - expired authorization
-  - backend rejected payload
+- build a new execution flow using `MiniKit.sendTransaction(...)`
+- bundle:
+  - Permit2 `approve(token, spender, amount, 0)`
+  - Genie contract call
+- confirm all required contracts and tokens are allowlisted in Developer Portal
+- surface platform errors directly:
+  - `invalid_contract`
+  - `disallowed_operation`
+  - `simulation_failed`
+  - `user_rejected`
 
 Exit criteria:
-- frontend can obtain a valid Permit2 authorization from the authenticated user and submit it
+- same-chain Genie send works end to end in World App with no `signTypedData` dependency
 
-## Phase 4: Connect Chat And Send Flows
+## Phase E: Reconnect Threshold And Confirmation UX
 
 Goal:
-- make actual Genie sends work end-to-end with confirmation rules
+- preserve product behavior while using the new transaction primitive
 
 Work:
-- redefine the meaning of the auto-approve threshold
-- for amounts below threshold:
-  - still require a Permit2 authorization if funds move on-chain
-  - streamline the UX so it feels like one confirmation
-- for amounts above threshold:
-  - create a pending transaction
-  - collect explicit confirmation
-  - then collect Permit2 authorization tied to that pending tx
-- ensure every pending tx binds:
+- under threshold:
+  - execute with a single bundled World App confirmation
+- over threshold:
+  - create pending tx
+  - require explicit user confirmation in-product
+  - then trigger the bundled World App transaction
+- ensure pending records still bind:
   - sender
   - recipient
   - amount
-  - deadline
-  - nonce or unique reference
 
 Exit criteria:
-- same-chain send works through the normal product flow without any ERC-20 allowance dependency
+- threshold behavior works again on top of the supported transaction architecture
 
-## Phase 5: Security Hardening And Replay Controls
+## Phase F: Cleanup Transitional SignatureTransfer Work
 
 Goal:
-- close the obvious financial risk gaps before broader use
+- remove the dead-end architecture once the new path is verified
 
 Work:
-- bind signature payloads to:
-  - exact token
-  - exact amount
-  - exact intended router/spender
-  - short expiry
-  - unique nonce
-- add backend replay protection for submitted authorizations
-- add monitoring and logs for:
-  - rejected signatures
-  - reused nonces
-  - chain failures
-  - partial backend failures
-- review failure recovery:
-  - tx pending but DB write failed
-  - DB pending but signature expired
-  - relayer submitted but receipt fetch delayed
+- delete frontend typed-data Permit2 signing helpers
+- remove backend `permitPayload` parsing/validation
+- replace or delete contract code built around `SignatureTransfer`
+- update tests and operator docs
 
 Exit criteria:
-- replay, mismatch, and stale authorization cases are explicitly tested
-
-## Phase 6: End-To-End Verification And Cleanup
-
-Goal:
-- ship the new path without dragging old assumptions behind it
-
-Work:
-- add integration tests across frontend, API, and contracts
-- remove dead code tied to:
-  - `approve`
-  - allowance polling
-  - approval-specific copy and logs
-- add a short operator runbook:
-  - how to verify a Permit2 transfer
-  - how to inspect failure states
-  - how to roll back to the checkpoint if needed
-
-Exit criteria:
-- full happy path and core failure paths are tested
-- old allowance architecture is fully removed or isolated behind a dead feature flag
+- no active code path depends on the blocked `SignatureTransfer` model
 
 ## Recommended Build Order
 
-1. Phase 0
-2. Phase 1
-3. Phase 2
-4. Phase 3
-5. Phase 4
-6. Phase 5
-7. Phase 6
+1. Phase A
+2. Phase B
+3. Phase C
+4. Phase D
+5. Phase E
+6. Phase F
 
 ## Working Recommendation
 
-Start with Phase 0 and Phase 1 only, then stop and validate the contract surface before touching the frontend again.
+Do not spend more implementation time on `MiniKit.signTypedData(...)` for Genie’s live send flow.
+
+The next real build step is Phase B: redesign the contract surface for a bundled `MiniKit.sendTransaction(...)` path that uses Permit2 allowance transfer mechanics.

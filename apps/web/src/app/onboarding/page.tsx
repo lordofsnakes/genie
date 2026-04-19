@@ -3,7 +3,6 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { ApprovalOverlay } from '@/components/ApprovalOverlay';
 
 const GOALS = [
   'Financial planning',
@@ -21,7 +20,6 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [budget, setBudget] = useState('100');
-  const [showApproval, setShowApproval] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const dirRef = useRef<'forward' | 'back'>('forward');
@@ -66,7 +64,6 @@ export default function Onboarding() {
     } catch (err) {
       console.error('[onboarding] failed to save threshold:', err);
       setSaveError(err instanceof Error ? err.message : 'Failed to save spending limit');
-      setShowApproval(false);
     } finally {
       setIsSaving(false);
     }
@@ -99,7 +96,7 @@ export default function Onboarding() {
     !!(budget && budget !== '0');
 
   const ctaLabel = step === 0 ? 'Get Started' : step === 1 ? 'Next' : "Let's Go";
-  const ctaAction = step === 2 ? () => setShowApproval(true) : () => goTo(step + 1);
+  const ctaAction = step === 2 ? () => finish(budget) : () => goTo(step + 1);
 
   return (
     <div
@@ -157,16 +154,6 @@ export default function Onboarding() {
           <p className="text-center text-sm text-red-400">{saveError}</p>
         </div>
       )}
-
-      {showApproval && session?.user?.walletAddress && (
-        <ApprovalOverlay
-          budgetUsd={Number(budget)}
-          walletAddress={session.user.walletAddress as `0x${string}`}
-          onSuccess={() => finish(budget)}
-          onClose={() => setShowApproval(false)}
-        />
-      )}
-
     </div>
   );
 }
@@ -355,8 +342,7 @@ function StepBudget({
         </div>
 
         <p className="text-xs text-white/25 leading-relaxed text-center px-4">
-          Genie will never exceed this limit without your approval. This is a
-          safeguard, not a commitment.
+          This saves your preferred spend threshold in Genie. On-chain spend authorization is temporarily disabled while the app migrates to Permit2.
         </p>
       </div>
     </div>

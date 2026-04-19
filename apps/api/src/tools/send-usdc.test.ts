@@ -1,17 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+const {
+  mockInsert,
+  mockUpdate,
+} = vi.hoisted(() => ({
+  mockInsert: vi.fn(),
+  mockUpdate: vi.fn(),
+}));
+
 // Mock chain/transfer module
 vi.mock('../chain/transfer', () => ({
-  executeOnChainTransfer: vi.fn(),
+  prepareOnChainTransfer: vi.fn(),
 }));
 
 // Mock @genie/db
-const mockInsert = vi.fn();
-const mockUpdate = vi.fn();
 vi.mock('@genie/db', () => ({
   db: {
-    insert: vi.fn(() => mockInsert),
-    update: vi.fn(() => mockUpdate),
+    insert: mockInsert,
+    update: mockUpdate,
   },
   transactions: {},
   eq: vi.fn(),
@@ -33,12 +39,12 @@ vi.mock('./require-verified', () => ({
 }));
 
 import { createSendUsdcTool } from './send-usdc';
-import { executeOnChainTransfer } from '../chain/transfer';
+import { prepareOnChainTransfer } from '../chain/transfer';
 import { db } from '@genie/db';
 import { requireVerified } from './require-verified';
 import { inferCategory } from './categorize';
 
-const mockExecuteOnChainTransfer = executeOnChainTransfer as ReturnType<typeof vi.fn>;
+const mockPrepareOnChainTransfer = prepareOnChainTransfer as ReturnType<typeof vi.fn>;
 const mockRequireVerified = requireVerified as ReturnType<typeof vi.fn>;
 
 const BASE_USER_ID = 'user-abc-123';
@@ -56,28 +62,29 @@ describe('createSendUsdcTool', () => {
     vi.clearAllMocks();
     // Default: pass verification
     mockRequireVerified.mockReturnValue(null);
-    // Default DB insert chain
-    mockInsert.mockReturnValue({
-      values: vi.fn().mockReturnValue({
-        returning: vi.fn().mockResolvedValue([{ id: 'tx-pending-id-1' }]),
-      }),
-    });
-    // Default DB insert (confirmed — no returning needed)
-    const insertValues = vi.fn().mockResolvedValue([]);
-    mockInsert.mockReturnValue({
-      values: insertValues,
-      // Also support chained .returning()
-    });
-    // Default DB update chain
+    const insertReturning = vi.fn().mockResolvedValue([{ id: 'tx-pending-id-1' }]);
+    const insertValues = vi.fn().mockReturnValue({ returning: insertReturning });
+    mockInsert.mockReturnValue({ values: insertValues });
     mockUpdate.mockReturnValue({
       set: vi.fn().mockReturnValue({
         where: vi.fn().mockResolvedValue([]),
       }),
     });
-    // Default transfer success
-    mockExecuteOnChainTransfer.mockResolvedValue({
-      routeTxHash: '0xroute111',
-      executeTxHash: '0xexec222',
+    mockPrepareOnChainTransfer.mockReturnValue({
+      chainId: 480,
+      permit2: {
+        address: '0xPermit2',
+        token: '0xUSDC',
+        spender: '0xRouter',
+        amount: '10000000',
+        expiration: 0,
+      },
+      transactions: [
+        { to: '0xPermit2', data: '0xapprove' },
+        { to: '0xRouter', data: '0xroute' },
+      ],
+      amountRaw: '10000000',
+      recipient: RECIPIENT,
     });
   });
 
@@ -92,11 +99,12 @@ describe('createSendUsdcTool', () => {
       { messages: [], toolCallId: 'test' },
     );
     expect(result).toMatchObject({ error: 'VERIFICATION_REQUIRED' });
-    expect(mockExecuteOnChainTransfer).not.toHaveBeenCalled();
+    expect(mockPrepareOnChainTransfer).not.toHaveBeenCalled();
   });
 
-  it('calls executeOnChainTransfer and records confirmed transaction when amountUsd <= autoApproveUsd', async () => {
-    const insertValues = vi.fn().mockResolvedValue([]);
+  it('creates a pending tx and returns wallet_transaction_required when amountUsd <= autoApproveUsd', async () => {
+    const insertReturning = vi.fn().mockResolvedValue([{ id: 'auto-pending-1' }]);
+    const insertValues = vi.fn().mockReturnValue({ returning: insertReturning });
     (db.insert as ReturnType<typeof vi.fn>).mockReturnValue({ values: insertValues });
 
     const tool = createSendUsdcTool(BASE_USER_ID, BASE_USER_CONTEXT);
@@ -105,20 +113,16 @@ describe('createSendUsdcTool', () => {
       { messages: [], toolCallId: 'test' },
     );
 
-    expect(mockExecuteOnChainTransfer).toHaveBeenCalledWith(
-      BASE_USER_CONTEXT.walletAddress,
-      RECIPIENT,
-      10,
-    );
+    expect(mockPrepareOnChainTransfer).toHaveBeenCalledWith(RECIPIENT, 10);
     expect(result).toMatchObject({
-      type: 'transfer_complete',
-      txHash: '0xexec222',
-      routeTxHash: '0xroute111',
+      type: 'wallet_transaction_required',
+      txId: 'auto-pending-1',
       amount: 10,
       recipient: RECIPIENT,
+      requiresExplicitConfirmation: false,
     });
     expect(insertValues).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'confirmed' }),
+      expect.objectContaining({ status: 'pending' }),
     );
   });
 
@@ -135,7 +139,7 @@ describe('createSendUsdcTool', () => {
       { messages: [], toolCallId: 'test' },
     );
 
-    expect(mockExecuteOnChainTransfer).not.toHaveBeenCalled();
+    expect(mockPrepareOnChainTransfer).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       type: 'confirmation_required',
       txId: 'pending-tx-999',
@@ -167,7 +171,9 @@ describe('createSendUsdcTool', () => {
   });
 
   it('returns TRANSFER_FAILED error when on-chain transfer throws', async () => {
-    mockExecuteOnChainTransfer.mockRejectedValue(new Error('Blockchain rejected tx'));
+    mockPrepareOnChainTransfer.mockImplementation(() => {
+      throw new Error('Blockchain rejected tx');
+    });
     const tool = createSendUsdcTool(BASE_USER_ID, BASE_USER_CONTEXT);
     const result = await tool.execute(
       { recipientAddress: RECIPIENT, amountUsd: 10 },
@@ -179,8 +185,9 @@ describe('createSendUsdcTool', () => {
     });
   });
 
-  it('stores category "food" when description is "dinner" on confirmed transaction', async () => {
-    const insertValues = vi.fn().mockResolvedValue([]);
+  it('stores category "food" when description is "dinner" on auto-approved pending transaction', async () => {
+    const insertReturning = vi.fn().mockResolvedValue([{ id: 'pending-auto-cat' }]);
+    const insertValues = vi.fn().mockReturnValue({ returning: insertReturning });
     (db.insert as ReturnType<typeof vi.fn>).mockReturnValue({ values: insertValues });
 
     const tool = createSendUsdcTool(BASE_USER_ID, BASE_USER_CONTEXT);
@@ -195,8 +202,9 @@ describe('createSendUsdcTool', () => {
     );
   });
 
-  it('stores category "transfers" when no description provided on confirmed transaction', async () => {
-    const insertValues = vi.fn().mockResolvedValue([]);
+  it('stores category "transfers" when no description provided on auto-approved pending transaction', async () => {
+    const insertReturning = vi.fn().mockResolvedValue([{ id: 'pending-auto-default' }]);
+    const insertValues = vi.fn().mockReturnValue({ returning: insertReturning });
     (db.insert as ReturnType<typeof vi.fn>).mockReturnValue({ values: insertValues });
 
     const tool = createSendUsdcTool(BASE_USER_ID, BASE_USER_CONTEXT);

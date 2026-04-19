@@ -45,10 +45,10 @@ vi.mock('@genie/db', async (importOriginal) => {
   };
 });
 
-// Mock executeOnChainTransfer
-const mockExecuteTransfer = vi.fn();
+// Mock prepareOnChainTransfer
+const mockPrepareTransfer = vi.fn();
 vi.mock('../chain/transfer', () => ({
-  executeOnChainTransfer: (...args: unknown[]) => mockExecuteTransfer(...args),
+  prepareOnChainTransfer: (...args: unknown[]) => mockPrepareTransfer(...args),
 }));
 
 // Import after mocks
@@ -83,11 +83,27 @@ beforeEach(() => {
   mockSelectResults.length = 0;
   mockDbUpdateSet.mockReturnValue(undefined);
   mockDbUpdateWhere.mockReturnValue(undefined);
+  mockPrepareTransfer.mockReturnValue({
+    chainId: 480,
+    permit2: {
+      address: '0xPermit2',
+      token: '0xUSDC',
+      spender: '0xRouter',
+      amount: '50000000',
+      expiration: 0,
+    },
+    transactions: [
+      { to: '0xPermit2', data: '0xapprove' },
+      { to: '0xRouter', data: '0xroute' },
+    ],
+    amountRaw: '50000000',
+    recipient: validPendingTx.recipientWallet,
+  });
 });
 
 describe('POST /confirm', () => {
   it('Test 1: returns 400 when txId is missing', async () => {
-    const req = new Request('http://localhost/confirm', {
+    const req = new Request('http://localhost/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: 'user-uuid-001' }),
@@ -99,7 +115,7 @@ describe('POST /confirm', () => {
   });
 
   it('Test 2: returns 400 when userId is missing', async () => {
-    const req = new Request('http://localhost/confirm', {
+    const req = new Request('http://localhost/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ txId: 'tx-uuid-001' }),
@@ -112,7 +128,7 @@ describe('POST /confirm', () => {
 
   it('Test 3: returns 404 when transaction not found', async () => {
     mockSelectResults[0] = []; // No transaction found
-    const req = new Request('http://localhost/confirm', {
+    const req = new Request('http://localhost/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ txId: 'tx-uuid-001', userId: 'user-uuid-001' }),
@@ -125,7 +141,7 @@ describe('POST /confirm', () => {
 
   it('Test 4: returns 410 when transaction status is expired', async () => {
     mockSelectResults[0] = [{ ...validPendingTx, status: 'expired' }];
-    const req = new Request('http://localhost/confirm', {
+    const req = new Request('http://localhost/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ txId: 'tx-uuid-001', userId: 'user-uuid-001' }),
@@ -138,7 +154,7 @@ describe('POST /confirm', () => {
 
   it('Test 5: returns 409 when transaction is already confirmed', async () => {
     mockSelectResults[0] = [{ ...validPendingTx, status: 'confirmed', txHash: '0xexistinghash' }];
-    const req = new Request('http://localhost/confirm', {
+    const req = new Request('http://localhost/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ txId: 'tx-uuid-001', userId: 'user-uuid-001' }),
@@ -155,7 +171,7 @@ describe('POST /confirm', () => {
       status: 'pending',
       expiresAt: new Date(Date.now() - 1000), // 1 second in the past
     }];
-    const req = new Request('http://localhost/confirm', {
+    const req = new Request('http://localhost/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ txId: 'tx-uuid-001', userId: 'user-uuid-001' }),
@@ -168,48 +184,58 @@ describe('POST /confirm', () => {
     expect(mockDbUpdateSet).toHaveBeenCalledWith({ status: 'expired' });
   });
 
-  it('Test 7: returns 200 with txHash on successful pending transaction', async () => {
+  it('Test 7: returns 200 wallet_transaction_required for a pending transaction before final wallet execution', async () => {
     mockSelectResults[0] = [validPendingTx]; // tx found
     mockSelectResults[1] = [validUser];       // user found
-    mockExecuteTransfer.mockResolvedValue({
-      routeTxHash: '0xrouteHash',
-      executeTxHash: '0xexecuteHash',
-    });
-    const req = new Request('http://localhost/confirm', {
+    const req = new Request('http://localhost/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ txId: 'tx-uuid-001', userId: 'user-uuid-001' }),
     });
     const res = await app.fetch(req);
     expect(res.status).toBe(200);
+    const json = await res.json() as { type: string; txPlan: unknown; requiresExplicitConfirmation: boolean };
+    expect(json.type).toBe('wallet_transaction_required');
+    expect(json.requiresExplicitConfirmation).toBe(true);
+    expect(json.txPlan).toBeDefined();
+    expect(mockPrepareTransfer).toHaveBeenCalledWith(validPendingTx.recipientWallet, 50);
+  });
+
+  it('Test 8: returns 200 and marks tx confirmed when txHash is supplied after wallet execution', async () => {
+    mockSelectResults[0] = [validPendingTx]; // tx found
+    const req = new Request('http://localhost/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        txId: 'tx-uuid-001',
+        userId: 'user-uuid-001',
+        txHash: '0xwalletHash',
+        routeTxHash: '0xrouteHash',
+      }),
+    });
+    const res = await app.fetch(req);
+    expect(res.status).toBe(200);
     const json = await res.json() as { success: boolean; txHash: string };
     expect(json.success).toBe(true);
-    expect(json.txHash).toBe('0xexecuteHash');
-    expect(mockExecuteTransfer).toHaveBeenCalledWith(
-      validUser.walletAddress,
-      validPendingTx.recipientWallet,
-      50.0,
-    );
+    expect(json.txHash).toBe('0xwalletHash');
     expect(mockDbUpdateSet).toHaveBeenCalledWith(expect.objectContaining({
       status: 'confirmed',
-      txHash: '0xexecuteHash',
+      txHash: '0xwalletHash',
       executedAt: expect.any(Date),
     }));
   });
 
-  it('Test 8: returns 500 and marks tx as failed when executeOnChainTransfer throws', async () => {
-    mockSelectResults[0] = [validPendingTx]; // tx found
-    mockSelectResults[1] = [validUser];       // user found
-    mockExecuteTransfer.mockRejectedValue(new Error('Chain error'));
-    const req = new Request('http://localhost/confirm', {
+  it('Test 9: returns 404 when user is missing while preparing the wallet transaction plan', async () => {
+    mockSelectResults[0] = [validPendingTx];
+    mockSelectResults[1] = [];
+    const req = new Request('http://localhost/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ txId: 'tx-uuid-001', userId: 'user-uuid-001' }),
     });
     const res = await app.fetch(req);
-    expect(res.status).toBe(500);
-    const json = await res.json() as { error: string; message: string };
-    expect(json.error).toBe('TRANSFER_FAILED');
-    expect(mockDbUpdateSet).toHaveBeenCalledWith({ status: 'failed' });
+    expect(res.status).toBe(404);
+    const json = await res.json() as { error: string };
+    expect(json.error).toBe('User not found');
   });
 });

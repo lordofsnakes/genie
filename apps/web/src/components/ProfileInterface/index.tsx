@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Verify } from '../Verify';
-import { ApprovalOverlay } from '../ApprovalOverlay';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
@@ -22,7 +21,6 @@ export const ProfileInterface = () => {
   const [spendingLimit, setSpendingLimit] = useState('');
   const [limitSaved, setLimitSaved] = useState(false);
   const [limitError, setLimitError] = useState('');
-  const [pendingLimit, setPendingLimit] = useState<number | null>(null);
   const [showAllTx, setShowAllTx] = useState(false);
 
   const saveLimit = async (val: number) => {
@@ -44,22 +42,16 @@ export const ProfileInterface = () => {
     }
   };
 
-  const handleSaveLimit = () => {
+  const handleSaveLimit = async () => {
     const val = parseFloat(spendingLimit);
     if (isNaN(val) || val <= 0) return;
 
     setLimitError('');
     setLimitSaved(false);
-    setPendingLimit(val);
-  };
-
-  const handleApprovalSuccess = async () => {
-    if (pendingLimit === null) return;
 
     try {
-      await saveLimit(pendingLimit);
+      await saveLimit(val);
       setLimitSaved(true);
-      setPendingLimit(null);
       setTimeout(() => setLimitSaved(false), 2000);
     } catch (err) {
       setLimitError(err instanceof Error ? err.message : 'Network error — please try again');
@@ -115,22 +107,13 @@ export const ProfileInterface = () => {
         </div>
         {spendingLimit && !isNaN(parseFloat(spendingLimit)) && (
           <p className="mt-2 text-[11px] text-accent/70">
-            Genie will ask for approval on anything above ${parseFloat(spendingLimit).toFixed(2)} USDC.
+            Genie will store ${parseFloat(spendingLimit).toFixed(2)} as your preferred spend threshold while Permit2 authorization is being built.
           </p>
         )}
         {limitError && (
           <p className="mt-2 text-[11px] text-red-400">{limitError}</p>
         )}
       </Section>
-
-      {pendingLimit !== null && session?.user?.walletAddress && (
-        <ApprovalOverlay
-          budgetUsd={pendingLimit}
-          walletAddress={session.user.walletAddress as `0x${string}`}
-          onSuccess={handleApprovalSuccess}
-          onClose={() => setPendingLimit(null)}
-        />
-      )}
 
       {/* ── Transaction History ── */}
       <Section label="Transaction History">

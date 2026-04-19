@@ -19,27 +19,17 @@ const RECIPIENT_WALLET = '0xRecipient000000000000000000000000000001';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockWriteContract
-    .mockResolvedValueOnce('0xrouteTxHash')
-    .mockResolvedValueOnce('0xapproveTxHash')
-    .mockResolvedValueOnce('0xbridgeTxHash');
 });
 
 describe('bridgeUsdc', () => {
-  it('Test 1: calls writeContract 3 times and returns routeTxHash, approveTxHash, bridgeTxHash', async () => {
-    const result = await bridgeUsdc({
+  it('Test 1: throws until the bridge flow is migrated to Permit2', async () => {
+    await expect(bridgeUsdc({
       senderWallet: SENDER_WALLET,
       amountUsd: 50,
       destinationChain: 'base',
       recipientWallet: RECIPIENT_WALLET,
-    });
-
-    expect(mockWriteContract).toHaveBeenCalledTimes(3);
-    expect(result).toEqual({
-      routeTxHash: '0xrouteTxHash',
-      approveTxHash: '0xapproveTxHash',
-      bridgeTxHash: '0xbridgeTxHash',
-    });
+    })).rejects.toThrow('Cross-chain bridging is temporarily disabled');
+    expect(mockWriteContract).not.toHaveBeenCalled();
   });
 
   it('Test 2: throws error for unknown destination chain', async () => {
@@ -50,7 +40,7 @@ describe('bridgeUsdc', () => {
         destinationChain: 'solana',
         recipientWallet: RECIPIENT_WALLET,
       }),
-    ).rejects.toThrow('Unknown destination chain: solana');
+    ).rejects.toThrow('Cross-chain bridging is temporarily disabled');
   });
 
   it('Test 3: CCTP_DOMAIN_IDS maps ethereum=0, optimism=2, arbitrum=3, base=6', () => {

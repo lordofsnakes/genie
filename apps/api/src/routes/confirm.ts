@@ -1,13 +1,19 @@
 import { Hono } from 'hono';
 import { db, transactions, users, eq, and } from '@genie/db';
-import { executeOnChainTransfer } from '../chain/transfer';
+import { prepareOnChainTransfer } from '../chain/transfer';
 
 export const confirmRoute = new Hono();
 
 confirmRoute.post('/', async (c) => {
   try {
     const body = await c.req.json();
-    const { txId, userId } = body;
+    const { txId, userId, txHash, routeTxHash } = body;
+
+    console.log('[route:confirm] request received', {
+      txId,
+      userId,
+      hasTxHash: Boolean(txHash),
+    });
 
     if (!txId || typeof txId !== 'string') {
       return c.json({ error: 'txId is required' }, 400);
@@ -46,47 +52,38 @@ confirmRoute.post('/', async (c) => {
       return c.json({ error: 'Transaction expired' }, 410);
     }
 
-    // Execute the on-chain transfer
-    try {
-      // Need the user's wallet address — fetch from users table (static import)
-      const [user] = await db.select()
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
-
-      if (!user) {
-        return c.json({ error: 'User not found' }, 404);
-      }
-
-      const { routeTxHash, executeTxHash } = await executeOnChainTransfer(
-        user.walletAddress as `0x${string}`,
-        tx.recipientWallet as `0x${string}`,
-        parseFloat(tx.amountUsd),
-      );
-
-      // Update transaction to confirmed
+    if (txHash) {
       await db.update(transactions)
-        .set({ status: 'confirmed', txHash: executeTxHash, executedAt: new Date() })
+        .set({ status: 'confirmed', txHash, executedAt: new Date() })
         .where(eq(transactions.id, txId));
 
       return c.json({
         success: true,
-        txHash: executeTxHash,
         routeTxHash,
+        txHash,
         amount: tx.amountUsd,
         recipient: tx.recipientWallet,
       });
-    } catch (err) {
-      console.error('[route:confirm] transfer error:', err);
-      // Mark transaction as failed
-      await db.update(transactions)
-        .set({ status: 'failed' })
-        .where(eq(transactions.id, txId));
-      return c.json({
-        error: 'TRANSFER_FAILED',
-        message: err instanceof Error ? err.message : 'Unknown error',
-      }, 500);
     }
+
+    const [user] = await db.select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+
+    return c.json({
+      type: 'wallet_transaction_required',
+      txId: tx.id,
+      amount: parseFloat(tx.amountUsd),
+      recipient: tx.recipientWallet,
+      expiresInMinutes: 15,
+      requiresExplicitConfirmation: true,
+      txPlan: prepareOnChainTransfer(tx.recipientWallet as `0x${string}`, parseFloat(tx.amountUsd)),
+    });
   } catch (err) {
     console.error('[route:confirm] error:', err);
     return c.json({ error: 'Internal server error' }, 500);
