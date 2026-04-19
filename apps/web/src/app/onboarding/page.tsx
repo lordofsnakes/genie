@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { ApprovalOverlay } from '@/components/ApprovalOverlay';
 
 const GOALS = [
   'Financial planning',
@@ -20,7 +21,8 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [budget, setBudget] = useState('100');
-const dirRef = useRef<'forward' | 'back'>('forward');
+  const [showApproval, setShowApproval] = useState(false);
+  const dirRef = useRef<'forward' | 'back'>('forward');
   const touchStartX = useRef<number | null>(null);
 
   const goTo = (next: number) => {
@@ -76,7 +78,7 @@ const dirRef = useRef<'forward' | 'back'>('forward');
     !!(budget && budget !== '0');
 
   const ctaLabel = step === 0 ? 'Get Started' : step === 1 ? 'Next' : "Let's Go";
-  const ctaAction = step === 2 ? () => finish(budget) : () => goTo(step + 1);
+  const ctaAction = step === 2 ? () => setShowApproval(true) : () => goTo(step + 1);
 
   return (
     <div
@@ -128,6 +130,15 @@ const dirRef = useRef<'forward' | 'back'>('forward');
           {ctaLabel}
         </button>
       </div>
+
+      {showApproval && session?.user?.walletAddress && (
+        <ApprovalOverlay
+          budgetUsd={Number(budget)}
+          walletAddress={session.user.walletAddress as `0x${string}`}
+          onSuccess={() => finish(budget)}
+          onClose={() => setShowApproval(false)}
+        />
+      )}
 
     </div>
   );

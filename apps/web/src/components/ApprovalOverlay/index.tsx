@@ -3,20 +3,22 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { MiniKit } from '@worldcoin/minikit-js';
 import { useUserOperationReceipt } from '@worldcoin/minikit-react';
-import { createPublicClient, encodeFunctionData, http } from 'viem';
+import { createPublicClient, encodeFunctionData, http, parseUnits } from 'viem';
 import { worldchain } from 'viem/chains';
 import { ERC20_APPROVE_ABI, USDC_ADDRESS, GENIE_ROUTER_ADDRESS } from '@/lib/contracts';
 
 interface ApprovalOverlayProps {
   budgetUsd: number;
+  walletAddress: `0x${string}`;
   onSuccess: () => void;
   onClose: () => void;
 }
 
 type ApprovalState = 'pending' | 'success' | 'error';
 
-export function ApprovalOverlay({ budgetUsd, onSuccess, onClose }: ApprovalOverlayProps) {
+export function ApprovalOverlay({ budgetUsd, walletAddress, onSuccess, onClose }: ApprovalOverlayProps) {
   const [state, setState] = useState<ApprovalState>('pending');
+  const [errorMessage, setErrorMessage] = useState('');
   const hasRun = useRef(false);
 
   const client = useMemo(
@@ -32,8 +34,17 @@ export function ApprovalOverlay({ budgetUsd, onSuccess, onClose }: ApprovalOverl
 
   const runApproval = useCallback(async () => {
     setState('pending');
+    setErrorMessage('');
     try {
-      const amount = BigInt(budgetUsd) * BigInt(1_000_000);
+      const amount = parseUnits(budgetUsd.toString(), 6);
+
+      console.log('[ApprovalOverlay] approving USDC allowance', {
+        token: USDC_ADDRESS,
+        owner: walletAddress,
+        spender: GENIE_ROUTER_ADDRESS,
+        amount: amount.toString(),
+      });
+
       const result = await MiniKit.sendTransaction({
         chainId: 480,
         transactions: [
@@ -54,15 +65,36 @@ export function ApprovalOverlay({ budgetUsd, onSuccess, onClose }: ApprovalOverl
 
       await poll(result.data.userOpHash);
 
+      const allowance = await client.readContract({
+        address: USDC_ADDRESS,
+        abi: ERC20_APPROVE_ABI,
+        functionName: 'allowance',
+        args: [walletAddress, GENIE_ROUTER_ADDRESS],
+      });
+
+      console.log('[ApprovalOverlay] allowance after approval', {
+        owner: walletAddress,
+        spender: GENIE_ROUTER_ADDRESS,
+        expected: amount.toString(),
+        actual: allowance.toString(),
+      });
+
+      if (allowance < amount) {
+        throw new Error(
+          `Approval confirmed, but allowance is still too low. Expected ${budgetUsd} USDC for router ${GENIE_ROUTER_ADDRESS}; actual raw allowance is ${allowance.toString()}.`,
+        );
+      }
+
       setState('success');
       setTimeout(() => {
         onSuccess();
       }, 1500);
     } catch (err) {
       console.error('[ApprovalOverlay] transaction failed:', err);
+      setErrorMessage(err instanceof Error ? err.message : 'Transaction failed or was rejected');
       setState('error');
     }
-  }, [budgetUsd, poll, onSuccess]);
+  }, [budgetUsd, client, poll, onSuccess, walletAddress]);
 
   useEffect(() => {
     if (hasRun.current) return;
@@ -127,7 +159,7 @@ export function ApprovalOverlay({ budgetUsd, onSuccess, onClose }: ApprovalOverl
             </svg>
           </div>
           <p className="font-headline text-white/80 text-center text-sm px-8 mb-8">
-            Transaction failed or was rejected
+            {errorMessage || 'Transaction failed or was rejected'}
           </p>
           <div className="flex flex-col gap-3 w-full px-12">
             <button

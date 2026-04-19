@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Verify } from '../Verify';
+import { ApprovalOverlay } from '../ApprovalOverlay';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
@@ -21,29 +22,47 @@ export const ProfileInterface = () => {
   const [spendingLimit, setSpendingLimit] = useState('');
   const [limitSaved, setLimitSaved] = useState(false);
   const [limitError, setLimitError] = useState('');
+  const [pendingLimit, setPendingLimit] = useState<number | null>(null);
   const [showAllTx, setShowAllTx] = useState(false);
 
-  const handleSaveLimit = async () => {
+  const saveLimit = async (val: number) => {
+    const userId = session?.user?.id;
+    if (!userId) {
+      setLimitError('Sign in before setting a spending limit');
+      return;
+    }
+
+    const res = await fetch(`${API_URL}/api/users/profile`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, autoApproveUsd: val }),
+    });
+
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({ message: 'Failed to save' }));
+      throw new Error(json.message ?? 'Failed to save');
+    }
+  };
+
+  const handleSaveLimit = () => {
     const val = parseFloat(spendingLimit);
     if (isNaN(val) || val <= 0) return;
 
     setLimitError('');
     setLimitSaved(false);
+    setPendingLimit(val);
+  };
+
+  const handleApprovalSuccess = async () => {
+    if (pendingLimit === null) return;
+
     try {
-      const res = await fetch(`${API_URL}/api/users/profile`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: session?.user?.id, autoApproveUsd: val }),
-      });
-      if (res.ok) {
-        setLimitSaved(true);
-        setTimeout(() => setLimitSaved(false), 2000);
-      } else {
-        const json = await res.json().catch(() => ({ message: 'Failed to save' }));
-        setLimitError(json.message ?? 'Failed to save');
-      }
-    } catch {
-      setLimitError('Network error — please try again');
+      await saveLimit(pendingLimit);
+      setLimitSaved(true);
+      setPendingLimit(null);
+      setTimeout(() => setLimitSaved(false), 2000);
+    } catch (err) {
+      setLimitError(err instanceof Error ? err.message : 'Network error — please try again');
     }
   };
 
@@ -103,6 +122,15 @@ export const ProfileInterface = () => {
           <p className="mt-2 text-[11px] text-red-400">{limitError}</p>
         )}
       </Section>
+
+      {pendingLimit !== null && session?.user?.walletAddress && (
+        <ApprovalOverlay
+          budgetUsd={pendingLimit}
+          walletAddress={session.user.walletAddress as `0x${string}`}
+          onSuccess={handleApprovalSuccess}
+          onClose={() => setPendingLimit(null)}
+        />
+      )}
 
       {/* ── Transaction History ── */}
       <Section label="Transaction History">
