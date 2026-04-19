@@ -18,6 +18,44 @@ type ApprovalState = 'pending' | 'success' | 'error';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+async function waitForAllowance(params: {
+  client: ReturnType<typeof createPublicClient>;
+  owner: `0x${string}`;
+  spender: `0x${string}`;
+  minAmount: bigint;
+}): Promise<bigint> {
+  const { client, owner, spender, minAmount } = params;
+
+  let lastAllowance = 0n;
+
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    lastAllowance = await client.readContract({
+      address: USDC_ADDRESS,
+      abi: ERC20_APPROVE_ABI,
+      functionName: 'allowance',
+      args: [owner, spender],
+    });
+
+    console.log('[ApprovalOverlay] allowance read', {
+      owner,
+      spender,
+      attempt,
+      allowance: lastAllowance.toString(),
+      required: minAmount.toString(),
+    });
+
+    if (lastAllowance >= minAmount) {
+      return lastAllowance;
+    }
+
+    if (attempt < 5) {
+      await sleep(1000);
+    }
+  }
+
+  return lastAllowance;
+}
+
 export function ApprovalOverlay({ budgetUsd, walletAddress, onSuccess, onClose }: ApprovalOverlayProps) {
   const [state, setState] = useState<ApprovalState>('pending');
   const [errorMessage, setErrorMessage] = useState('');
@@ -38,6 +76,10 @@ export function ApprovalOverlay({ budgetUsd, walletAddress, onSuccess, onClose }
     setState('pending');
     setErrorMessage('');
     try {
+      throw new Error(
+        'World App does not support raw ERC-20 approve transactions in MiniKit sendTransaction. Genie currently relies on token allowance, so this approval flow cannot succeed until the transfer path is migrated to Permit2 or another supported authorization method.',
+      );
+
       const amount = parseUnits(budgetUsd.toString(), 6);
 
       console.log('[ApprovalOverlay] approving USDC allowance', {
@@ -73,51 +115,44 @@ export function ApprovalOverlay({ budgetUsd, walletAddress, onSuccess, onClose }
       });
 
       const { transactionHash, receipt } = await poll(result.data.userOpHash);
+
+      if (receipt.status !== 'success') {
+        throw new Error(`Approval transaction did not succeed. Receipt status: ${receipt.status}`);
+      }
+
       const minedTx = await client.getTransaction({ hash: transactionHash });
+      const sessionOwner = getAddress(walletAddress);
 
       console.log('[ApprovalOverlay] approval transaction mined', {
         transactionHash,
         status: receipt.status,
         transactionFrom: minedTx.from,
         transactionTo: minedTx.to,
-        expectedTo: USDC_ADDRESS,
+        requestedToken: USDC_ADDRESS,
+        requestedOwner: sessionOwner,
+        requestedSpender: GENIE_ROUTER_ADDRESS,
         inputPrefix: minedTx.input.slice(0, 10),
       });
 
-      // Give RPC/indexed reads a short moment after the AA receipt before reading allowance.
-      await sleep(1500);
-
-      const approvalOwner = getAddress(minedTx.from);
-      const sessionOwner = getAddress(walletAddress);
-
-      const sessionAllowance = await client.readContract({
-        address: USDC_ADDRESS,
-        abi: ERC20_APPROVE_ABI,
-        functionName: 'allowance',
-        args: [sessionOwner, GENIE_ROUTER_ADDRESS],
+      // In MiniKit's AA flow the outer transaction sender/recipient belong to the relayed execution,
+      // so the only safe approval owner to verify is the authenticated wallet address from Wallet Auth.
+      const sessionAllowance = await waitForAllowance({
+        client,
+        owner: sessionOwner,
+        spender: GENIE_ROUTER_ADDRESS,
+        minAmount: amount,
       });
-
-      const approvalOwnerAllowance = approvalOwner === sessionOwner
-        ? sessionAllowance
-        : await client.readContract({
-            address: USDC_ADDRESS,
-            abi: ERC20_APPROVE_ABI,
-            functionName: 'allowance',
-            args: [approvalOwner, GENIE_ROUTER_ADDRESS],
-          });
 
       console.log('[ApprovalOverlay] allowance after approval', {
         sessionOwner,
-        approvalOwner,
         spender: GENIE_ROUTER_ADDRESS,
         expected: amount.toString(),
         sessionAllowance: sessionAllowance.toString(),
-        approvalOwnerAllowance: approvalOwnerAllowance.toString(),
       });
 
       if (sessionAllowance < amount) {
         throw new Error(
-          `Approval confirmed, but allowance is still too low. Expected ${budgetUsd} USDC for router ${GENIE_ROUTER_ADDRESS}; session owner ${sessionOwner} allowance is ${sessionAllowance.toString()}, approval tx owner ${approvalOwner} allowance is ${approvalOwnerAllowance.toString()}.`,
+          `Approval transaction succeeded, but ${sessionOwner} does not have enough USDC allowance for router ${GENIE_ROUTER_ADDRESS}. Expected at least ${amount.toString()}, got ${sessionAllowance.toString()}.`,
         );
       }
 
@@ -145,6 +180,9 @@ export function ApprovalOverlay({ budgetUsd, walletAddress, onSuccess, onClose }
           <div className="w-16 h-16 rounded-full border-4 border-white/10 border-t-[#ccff00] animate-spin mb-8" />
           <p className="font-headline text-white/80 text-center text-sm px-8">
             Authorizing Genie to spend up to ${budgetUsd} USDC on your behalf
+          </p>
+          <p className="text-white/50 text-center text-xs px-8 mt-3 leading-relaxed">
+            Your wallet may show 0 USDC for this request because approvals update allowance without moving funds.
           </p>
         </>
       )}

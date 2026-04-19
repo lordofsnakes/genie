@@ -22,6 +22,8 @@ export default function Onboarding() {
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [budget, setBudget] = useState('100');
   const [showApproval, setShowApproval] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const dirRef = useRef<'forward' | 'back'>('forward');
   const touchStartX = useRef<number | null>(null);
 
@@ -37,18 +39,37 @@ export default function Onboarding() {
     );
   };
 
-  const finish = (budgetValue: string) => {
+  const finish = async (budgetValue: string) => {
+    if (isSaving) return;
+
     const userId = session?.user?.id;
-    if (userId && budgetValue && budgetValue !== '0') {
-      // Fire-and-forget — don't block navigation on the API round-trip
-      fetch(`${API_URL}/api/users/profile`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, autoApproveUsd: Number(budgetValue) }),
-      }).catch((err) => console.error('[onboarding] failed to save threshold:', err));
+
+    setSaveError('');
+    setIsSaving(true);
+
+    try {
+      if (userId && budgetValue && budgetValue !== '0') {
+        const res = await fetch(`${API_URL}/api/users/profile`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, autoApproveUsd: Number(budgetValue) }),
+        });
+
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({ message: 'Failed to save spending limit' }));
+          throw new Error(json.message ?? 'Failed to save spending limit');
+        }
+      }
+
+      localStorage.setItem('genie_onboarding_done', '1');
+      router.push('/home');
+    } catch (err) {
+      console.error('[onboarding] failed to save threshold:', err);
+      setSaveError(err instanceof Error ? err.message : 'Failed to save spending limit');
+      setShowApproval(false);
+    } finally {
+      setIsSaving(false);
     }
-    localStorage.setItem('genie_onboarding_done', '1');
-    router.push('/home');
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -123,13 +144,19 @@ export default function Onboarding() {
         )}
         <button
           onClick={ctaAction}
-          disabled={!canProceed}
+          disabled={!canProceed || isSaving}
           className="flex-1 flex items-center justify-center py-5 font-black italic text-2xl uppercase tracking-tight active:opacity-60 transition-opacity duration-150 disabled:opacity-20 disabled:pointer-events-none rounded-2xl"
           style={{ fontFamily: "'Monument Extended', sans-serif", backgroundColor: '#ccff00', color: '#000000' }}
         >
-          {ctaLabel}
+          {isSaving ? 'Saving...' : ctaLabel}
         </button>
       </div>
+
+      {saveError && (
+        <div className="px-5 pb-4">
+          <p className="text-center text-sm text-red-400">{saveError}</p>
+        </div>
+      )}
 
       {showApproval && session?.user?.walletAddress && (
         <ApprovalOverlay
