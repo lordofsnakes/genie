@@ -71,8 +71,8 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
     setStatus('sending');
 
     try {
-      let res = await submitSend();
-      let json = await res.json();
+      const res = await submitSend();
+      const json = await res.json();
 
       if (!res.ok) {
         setErrorMessage(json.message ?? json.error ?? 'Transaction failed. Try again.');
