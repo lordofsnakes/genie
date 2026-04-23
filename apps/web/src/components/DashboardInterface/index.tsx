@@ -202,7 +202,7 @@ export const DashboardInterface = () => {
                 }
               }}
               disabled={!hasUsdcToDeposit}
-              className="w-full rounded-full border border-accent/30 bg-accent px-4 py-3 text-sm font-bold text-black shadow-[0_0_0_4px_rgba(204,255,0,0.08)] disabled:opacity-60"
+              className="w-full rounded-full border border-accent/30 bg-accent px-6 py-4 text-base font-headline font-black tracking-[0.04em] text-black shadow-[0_0_0_4px_rgba(204,255,0,0.08)] disabled:opacity-60"
             >
               Add to yield position
             </button>
