@@ -4,6 +4,7 @@ import { AddFundsModal } from '@/components/AddFundsModal';
 import { ReceiveModal } from '@/components/ReceiveModal';
 import { SendModal } from '@/components/SendModal';
 import { useBalance } from '@/hooks/useBalance';
+import { useDebts } from '@/hooks/useDebts';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -28,6 +29,16 @@ function formatWallet(wallet: string): string {
   return `${wallet.slice(0, 6)}...${wallet.slice(-4)}`;
 }
 
+function formatExpectedCollectionDate(dateStr: string): string {
+  const expected = new Date(dateStr);
+  expected.setDate(expected.getDate() + 30);
+
+  return expected.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 export const DashboardInterface = () => {
   const { data: session } = useSession();
   const router = useRouter();
@@ -39,6 +50,8 @@ export const DashboardInterface = () => {
   const userId = session?.user?.id ?? '';
   const { balance, loading: balanceLoading, error: balanceError, refetch: refetchBalance } = useBalance(walletAddress);
   const { transactions, loading: txLoading } = useTransactions(userId);
+  const { debts, loading: debtLoading, error: debtError } = useDebts(userId);
+  const recentTransactions = transactions.slice(0, 5);
 
   return (
     <>
@@ -139,10 +152,10 @@ export const DashboardInterface = () => {
                 <div key={i} className="h-10 bg-white/5 animate-pulse rounded" />
               ))}
             </div>
-          ) : transactions.length === 0 ? (
+          ) : recentTransactions.length === 0 ? (
             <p className="py-4 text-sm text-white/40">No transactions yet</p>
           ) : (
-            transactions.map((tx) => (
+            recentTransactions.map((tx) => (
               <div key={tx.id} className="flex items-center justify-between py-4">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 bg-surface flex items-center justify-center flex-shrink-0">
@@ -159,6 +172,49 @@ export const DashboardInterface = () => {
                 </div>
                 <p className="font-headline font-bold text-sm text-white/60">
                   -{parseFloat(tx.amountUsd).toFixed(2)} USDC
+                </p>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* ── Money Lent ── */}
+      <div className="px-6 mt-8">
+        <p className="font-headline text-[10px] uppercase tracking-[0.25em] text-white/40 mb-4">
+          Money Lent
+        </p>
+        <div className="flex flex-col divide-y divide-white/5">
+          {debtLoading ? (
+            <div className="py-4 flex flex-col gap-3">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-12 bg-white/5 animate-pulse rounded" />
+              ))}
+            </div>
+          ) : debtError ? (
+            <p className="py-4 text-sm text-red-400">Could not load money lent.</p>
+          ) : debts.length === 0 ? (
+            <p className="py-4 text-sm text-white/40">No open loans to collect.</p>
+          ) : (
+            debts.map((debt) => (
+              <div key={debt.id} className="flex items-center justify-between py-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-surface flex items-center justify-center flex-shrink-0">
+                    <span className="material-symbols-outlined text-accent text-base">
+                      payments
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">
+                      Lent to {formatWallet(debt.counterpartyWallet)}
+                    </p>
+                    <p className="text-[11px] text-white/40">
+                      Expected by {formatExpectedCollectionDate(debt.createdAt)}
+                    </p>
+                  </div>
+                </div>
+                <p className="font-headline font-bold text-sm text-accent">
+                  +{parseFloat(debt.amountUsd).toFixed(2)} USDC
                 </p>
               </div>
             ))
