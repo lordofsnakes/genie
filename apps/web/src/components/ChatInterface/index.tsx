@@ -146,12 +146,15 @@ export const ChatInterface = () => {
   const contentRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const yieldResponseTimeoutRef = useRef<number | null>(null);
+  const yieldWalletTimeoutRef = useRef<number | null>(null);
   const permissionsRequested = useRef(false);
   const handledWalletTxIds = useRef<Set<string>>(new Set());
   const hydratedStorageKey = useRef<string | null>(null);
   const [walletExecutionState, setWalletExecutionState] = useState<Record<string, 'pending' | 'success' | 'error'>>({});
   const [walletExecutionError, setWalletExecutionError] = useState<Record<string, string>>({});
   const [cancelledConfirmTxIds, setCancelledConfirmTxIds] = useState<string[]>([]);
+  const [localYieldThinking, setLocalYieldThinking] = useState(false);
   const chatStorageKey = session?.user?.id ? getChatStorageKey(session.user.id) : null;
   const { balance, refetch: refetchBalance } = useBalance(session?.user?.walletAddress ?? '');
   const numericBalance = balance ? parseFloat(balance) : null;
@@ -175,7 +178,18 @@ export const ChatInterface = () => {
   });
   const { poll } = useUserOperationReceipt({ client: worldChainReceiptClient });
 
-  const isThinking = status === 'submitted';
+  const isThinking = status === 'submitted' || localYieldThinking;
+
+  useEffect(() => {
+    return () => {
+      if (yieldResponseTimeoutRef.current) {
+        window.clearTimeout(yieldResponseTimeoutRef.current);
+      }
+      if (yieldWalletTimeoutRef.current) {
+        window.clearTimeout(yieldWalletTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!chatStorageKey) {
@@ -460,14 +474,22 @@ export const ChatInterface = () => {
           role: 'user',
           parts: [{ type: 'text', text }],
         },
-        {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          parts: [{ type: 'text', text: recommendationText }],
-        },
       ]);
+      setLocalYieldThinking(true);
 
-      window.setTimeout(() => {
+      yieldResponseTimeoutRef.current = window.setTimeout(() => {
+        setMessages((current) => [
+          ...current,
+          {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            parts: [{ type: 'text', text: recommendationText }],
+          },
+        ]);
+        setLocalYieldThinking(false);
+      }, 1400);
+
+      yieldWalletTimeoutRef.current = window.setTimeout(() => {
         executeMiniKitTransactionBundle(
           buildYieldDepositBundle(
             session?.user?.walletAddress as `0x${string}`,
@@ -504,14 +526,14 @@ export const ChatInterface = () => {
                 role: 'assistant',
                 parts: [{
                   type: 'text',
-                  text: err instanceof Error
+                text: err instanceof Error
                     ? `I couldn’t open the yield transaction: ${err.message}`
                     : 'I couldn’t open the yield transaction.',
                 }],
               },
             ]);
           });
-      }, 1400);
+      }, 4700);
       return;
     }
 
