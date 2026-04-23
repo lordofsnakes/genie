@@ -3,6 +3,8 @@
 import { useChat } from '@ai-sdk/react';
 import { TextStreamChatTransport, type UIMessage } from 'ai';
 import { getPublicApiBaseUrl, getPublicApiUrl } from '@/lib/backend-url';
+import { YieldDepositModal } from '@/components/YieldDepositModal';
+import { useBalance } from '@/hooks/useBalance';
 import { MiniKit } from '@worldcoin/minikit-js';
 import { useUserOperationReceipt } from '@worldcoin/minikit-react';
 import { useSession } from 'next-auth/react';
@@ -16,6 +18,7 @@ import {
   type WalletTransactionRequiredResponse,
   worldChainReceiptClient,
 } from '@/lib/minikit';
+import { getSuggestedYieldDepositAmount } from '@/lib/yield';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ContactList, parseContactList, type ContactData } from '../ContactCard';
@@ -64,6 +67,13 @@ function hasPendingTransactionPayload(text: string): boolean {
     || /confirmation_required/.test(text)
     || /"txPlan"\s*:/.test(text)
   );
+}
+
+function shouldOfferYieldShortcut(text: string): boolean {
+  const normalized = text.toLowerCase();
+  const asksForAdvice = /(recommend|suggest|advice|should i|what should i do|best way)/.test(normalized);
+  const mentionsIdleCash = /(money|cash|usdc|balance|savings|save|invest|yield|vault)/.test(normalized);
+  return asksForAdvice && mentionsIdleCash;
 }
 
 function getConfirmStateStorageKey(chatStorageKey: string) {
@@ -128,7 +138,13 @@ export const ChatInterface = () => {
   const [walletExecutionState, setWalletExecutionState] = useState<Record<string, 'pending' | 'success' | 'error'>>({});
   const [walletExecutionError, setWalletExecutionError] = useState<Record<string, string>>({});
   const [cancelledConfirmTxIds, setCancelledConfirmTxIds] = useState<string[]>([]);
+  const [showYieldDeposit, setShowYieldDeposit] = useState(false);
   const chatStorageKey = session?.user?.id ? getChatStorageKey(session.user.id) : null;
+  const { balance, refetch: refetchBalance } = useBalance(session?.user?.walletAddress ?? '');
+  const numericBalance = balance ? parseFloat(balance) : null;
+  const chatSuggestedYieldAmount = numericBalance !== null && !Number.isNaN(numericBalance)
+    ? getSuggestedYieldDepositAmount(numericBalance, 0.2)
+    : '0.00';
 
   const transport = useMemo(
     () => new TextStreamChatTransport({ api: `${API_URL}/api/chat` }),
@@ -417,6 +433,26 @@ export const ChatInterface = () => {
     }
 
     setLastSendDebug(`sending "${text}" to ${API_URL || 'same-origin'}/api/chat`);
+
+    if (shouldOfferYieldShortcut(text) && numericBalance !== null && !Number.isNaN(numericBalance) && numericBalance > 0) {
+      const recommendationText = `You have $${numericBalance.toFixed(2)} in USDC. I’d put about $${chatSuggestedYieldAmount} into a yield vault to keep some cash liquid while still earning. I opened the deposit flow for you.`;
+      setMessages((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          role: 'user',
+          parts: [{ type: 'text', text }],
+        },
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          parts: [{ type: 'text', text: recommendationText }],
+        },
+      ]);
+      setShowYieldDeposit(true);
+      return;
+    }
+
     sendMessage(
       { text },
       {
@@ -565,6 +601,18 @@ export const ChatInterface = () => {
           </div>
         </div>
       </div>
+
+      <YieldDepositModal
+        isOpen={showYieldDeposit}
+        walletAddress={session?.user?.walletAddress ?? ''}
+        balanceAmount={numericBalance}
+        defaultAmount={chatSuggestedYieldAmount}
+        suggestionLabel="Genie suggests starting with 20% of your available USDC from chat."
+        onClose={() => setShowYieldDeposit(false)}
+        onSuccess={() => {
+          refetchBalance();
+        }}
+      />
     </div>
   );
 };
