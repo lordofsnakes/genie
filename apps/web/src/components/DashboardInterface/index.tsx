@@ -6,8 +6,47 @@ import { SendModal } from '@/components/SendModal';
 import { useBalance } from '@/hooks/useBalance';
 import { useDebts } from '@/hooks/useDebts';
 import { useTransactions } from '@/hooks/useTransactions';
+import {
+  executeMiniKitTransactionBundle,
+  extractMiniKitTransactionHash,
+  worldChainReceiptClient,
+} from '@/lib/minikit';
+import { useUserOperationReceipt } from '@worldcoin/minikit-react';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
+import { encodeFunctionData, parseUnits } from 'viem';
+
+const WORLD_CHAIN_ID = 480;
+const WORLD_USDC_ADDRESS = '0x79A02482A880bCE3F13e09Da970dC34db4CD24d1' as const;
+const RE7_USDC_VAULT_ADDRESS = '0xb1E80387EbE53Ff75a89736097D34dC8D9E9045B' as const;
+const RE7_USDC_VAULT_APR = '5.16%';
+const RE7_USDC_VAULT_PROVIDER = 'Re7 USDC';
+
+const erc20ApproveAbi = [
+  {
+    type: 'function',
+    name: 'approve',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+] as const;
+
+const erc4626DepositAbi = [
+  {
+    type: 'function',
+    name: 'deposit',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'assets', type: 'uint256' },
+      { name: 'receiver', type: 'address' },
+    ],
+    outputs: [{ name: 'shares', type: 'uint256' }],
+  },
+] as const;
 
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr);
@@ -42,11 +81,14 @@ export const DashboardInterface = () => {
   const [showSend, setShowSend] = useState(false);
   const [showAddFunds, setShowAddFunds] = useState(false);
   const [showYieldPreview, setShowYieldPreview] = useState(false);
+  const [yieldStatus, setYieldStatus] = useState<'idle' | 'signing' | 'success' | 'error'>('idle');
+  const [yieldError, setYieldError] = useState('');
   const walletAddress = session?.user?.walletAddress ?? '';
   const userId = session?.user?.id ?? '';
   const { balance, loading: balanceLoading, error: balanceError, refetch: refetchBalance } = useBalance(walletAddress);
   const { transactions, loading: txLoading } = useTransactions(userId);
   const { debts, loading: debtLoading, error: debtError } = useDebts(userId);
+  const { poll, isLoading: isPollingYieldReceipt } = useUserOperationReceipt({ client: worldChainReceiptClient });
   const recentTransactions = transactions.slice(0, 5);
   const numericBalance = balance ? parseFloat(balance) : null;
   const hasUsdcToDeposit = !balanceLoading && !balanceError && numericBalance !== null && !Number.isNaN(numericBalance) && numericBalance > 0;
@@ -60,6 +102,59 @@ export const DashboardInterface = () => {
   const genieSummarySubtext = hasUsdcToDeposit
     ? 'Phase 2 POC: tap to preview one USDC vault on World Chain.'
     : 'Phase 2 POC: this card now reacts to the live balance in your wallet.';
+  const depositAmountDisplay = numericBalance?.toFixed(2) ?? '0.00';
+
+  const handleCloseYieldPreview = () => {
+    if (yieldStatus === 'signing') return;
+    setShowYieldPreview(false);
+    setYieldStatus('idle');
+    setYieldError('');
+  };
+
+  const handleYieldDeposit = async () => {
+    if (!walletAddress || !hasUsdcToDeposit || numericBalance === null) return;
+
+    setYieldError('');
+    setYieldStatus('signing');
+
+    try {
+      const amountRaw = parseUnits(numericBalance.toFixed(2), 6);
+      const approveData = encodeFunctionData({
+        abi: erc20ApproveAbi,
+        functionName: 'approve',
+        args: [RE7_USDC_VAULT_ADDRESS, amountRaw],
+      });
+      const depositData = encodeFunctionData({
+        abi: erc4626DepositAbi,
+        functionName: 'deposit',
+        args: [amountRaw, walletAddress as `0x${string}`],
+      });
+
+      const { userOpHash } = await executeMiniKitTransactionBundle({
+        chainId: WORLD_CHAIN_ID,
+        transactions: [
+          { to: WORLD_USDC_ADDRESS, data: approveData },
+          { to: RE7_USDC_VAULT_ADDRESS, data: depositData },
+        ],
+      });
+
+      const receipt = await poll(userOpHash);
+      const finalHash = extractMiniKitTransactionHash(receipt) ?? userOpHash;
+      console.log('[yield] deposit completed', {
+        userOpHash,
+        finalHash,
+        vault: RE7_USDC_VAULT_ADDRESS,
+        amountRaw: amountRaw.toString(),
+      });
+
+      setYieldStatus('success');
+      refetchBalance();
+    } catch (err) {
+      console.error('[yield] deposit failed', err);
+      setYieldError(err instanceof Error ? err.message : 'Vault deposit failed. Try again.');
+      setYieldStatus('error');
+    }
+  };
 
   return (
     <>
@@ -261,12 +356,12 @@ export const DashboardInterface = () => {
                   Yield Preview
                 </p>
                 <h2 className="font-headline text-2xl font-extrabold tracking-tighter">
-                  Morpho USDC Vault
+                  {RE7_USDC_VAULT_PROVIDER}
                 </h2>
               </div>
               <button
                 type="button"
-                onClick={() => setShowYieldPreview(false)}
+                onClick={handleCloseYieldPreview}
                 className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center active:scale-95 transition-transform"
                 aria-label="Close yield preview"
               >
@@ -278,7 +373,7 @@ export const DashboardInterface = () => {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-white/60">Available to deposit</span>
                 <span className="font-headline text-xl font-bold">
-                  ${numericBalance?.toFixed(2) ?? '0.00'}
+                  ${depositAmountDisplay}
                 </span>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -290,26 +385,52 @@ export const DashboardInterface = () => {
                   <p className="text-white/40 text-[11px] uppercase tracking-widest">Chain</p>
                   <p className="mt-2 font-medium">World Chain</p>
                 </div>
+                <div className="rounded-xl bg-white/5 p-3">
+                  <p className="text-white/40 text-[11px] uppercase tracking-widest">Protocol</p>
+                  <p className="mt-2 font-medium">Morpho</p>
+                </div>
+                <div className="rounded-xl bg-white/5 p-3">
+                  <p className="text-white/40 text-[11px] uppercase tracking-widest">APR</p>
+                  <p className="mt-2 font-medium">{RE7_USDC_VAULT_APR}</p>
+                </div>
               </div>
               <p className="mt-4 text-sm text-white/60 leading-relaxed">
-                For the proof of concept, Genie will route your USDC into one curated vault. The next phase wires this preview into the wallet transaction you can sign.
+                For the proof of concept, Genie will route your USDC into one curated World Chain vault. Tapping deposit opens one bundled wallet transaction to approve USDC and deposit it.
+              </p>
+              <p className="mt-3 text-[11px] uppercase tracking-widest text-white/35 break-all">
+                Vault {RE7_USDC_VAULT_ADDRESS}
               </p>
             </div>
+
+            {yieldStatus === 'success' && (
+              <div className="mt-4 rounded-2xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-200">
+                Deposit submitted successfully. Your balance should refresh in a moment.
+              </div>
+            )}
+            {yieldStatus === 'error' && yieldError && (
+              <div className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                {yieldError}
+              </div>
+            )}
 
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setShowYieldPreview(false)}
+                onClick={handleCloseYieldPreview}
+                disabled={yieldStatus === 'signing'}
                 className="rounded-full border border-white/10 px-4 py-3 text-sm font-medium text-white/80"
               >
                 Not now
               </button>
               <button
                 type="button"
-                onClick={() => setShowYieldPreview(false)}
-                className="rounded-full bg-accent px-4 py-3 text-sm font-bold text-black"
+                onClick={handleYieldDeposit}
+                disabled={yieldStatus === 'signing' || isPollingYieldReceipt}
+                className="rounded-full bg-accent px-4 py-3 text-sm font-bold text-black disabled:opacity-60"
               >
-                Deposit next
+                {yieldStatus === 'signing' || isPollingYieldReceipt
+                  ? 'Opening wallet...'
+                  : `Deposit $${depositAmountDisplay}`}
               </button>
             </div>
           </div>
