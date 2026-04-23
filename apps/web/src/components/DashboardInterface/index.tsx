@@ -12,6 +12,7 @@ import {
   getHomeGenieSuggestion,
   HOME_CHAT_SEED_STORAGE_KEY,
 } from '@/lib/home-genie';
+import { isDemoVerified } from '@/lib/demo-verification';
 import {
   getSuggestedYieldDepositAmount,
   RE7_USDC_VAULT_ADDRESS,
@@ -70,6 +71,7 @@ export const DashboardInterface = () => {
   } = useYieldPosition(walletAddress, RE7_USDC_VAULT_ADDRESS);
   const recentTransactions = transactions.slice(0, 5);
   const numericBalance = balance ? parseFloat(balance) : null;
+  const demoVerified = isDemoVerified(userId);
   const hasUsdcToDeposit = !balanceLoading && !balanceError && numericBalance !== null && !Number.isNaN(numericBalance) && numericBalance > 0;
   const suggestedDepositAmount = numericBalance !== null && !Number.isNaN(numericBalance)
     ? getSuggestedYieldDepositAmount(numericBalance, 0.6)
@@ -332,6 +334,7 @@ export const DashboardInterface = () => {
           balanceAmount={numericBalance}
           defaultAmount={suggestedDepositAmount}
           suggestionLabel="Genie suggests parking 60% of your idle USDC in yield."
+          requiresVerification={!demoVerified}
           onClose={() => setShowYieldPreview(false)}
           onSuccess={() => {
             refetchBalance();

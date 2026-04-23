@@ -19,6 +19,7 @@ type YieldDepositModalProps = {
   balanceAmount: number | null;
   defaultAmount: string;
   suggestionLabel: string;
+  requiresVerification?: boolean;
   onClose: () => void;
   onSuccess?: () => void;
 };
@@ -29,6 +30,7 @@ export function YieldDepositModal({
   balanceAmount,
   defaultAmount,
   suggestionLabel,
+  requiresVerification = false,
   onClose,
   onSuccess,
 }: YieldDepositModalProps) {
@@ -56,7 +58,7 @@ export function YieldDepositModal({
   if (!isOpen) return null;
 
   const handleDeposit = async () => {
-    if (!hasValidAmount || !walletAddress) return;
+    if (requiresVerification || !hasValidAmount || !walletAddress) return;
 
     setError('');
     setStatus('signing');
@@ -167,6 +169,11 @@ export function YieldDepositModal({
                 Enter an amount above 0 and no more than your current USDC balance.
               </p>
             )}
+            {requiresVerification && (
+              <p className="mt-2 text-[11px] text-accent">
+                Verify with World ID in Profile to unlock yield deposits.
+              </p>
+            )}
           </div>
           {status === 'success' && (
             <div className="mt-4 rounded-2xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-200">
@@ -192,7 +199,7 @@ export function YieldDepositModal({
           <button
             type="button"
             onClick={handleDeposit}
-            disabled={status === 'signing' || isLoading || !hasValidAmount}
+            disabled={status === 'signing' || isLoading || !hasValidAmount || requiresVerification}
             className="rounded-full bg-accent px-3 py-2 text-sm font-bold text-black disabled:opacity-60"
           >
             <span className="inline-flex w-full items-center justify-center gap-2">

@@ -1,6 +1,8 @@
 'use client';
 import { LiveFeedback } from '@worldcoin/mini-apps-ui-kit-react';
-import { useState } from 'react';
+import { isDemoVerified, setDemoVerified } from '@/lib/demo-verification';
+import { useSession } from 'next-auth/react';
+import { useEffect, useState } from 'react';
 
 /**
  * This component is an example of how to use World ID verification via IDKit.
@@ -13,15 +15,23 @@ interface VerifyProps {
 }
 
 export const Verify = ({ onVerified }: VerifyProps = {}) => {
+  const { data: session } = useSession();
   const [buttonState, setButtonState] = useState<
     'pending' | 'success' | 'failed' | undefined
   >(undefined);
+
+  useEffect(() => {
+    if (isDemoVerified(session?.user?.id)) {
+      setButtonState('success');
+    }
+  }, [session?.user?.id]);
 
   const onClickVerify = async () => {
     setButtonState('pending');
     try {
       // Temporary mock while the real World ID flow is disabled.
       await new Promise((resolve) => setTimeout(resolve, 350));
+      setDemoVerified(session?.user?.id, true);
       setButtonState('success');
       onVerified?.();
     } catch {

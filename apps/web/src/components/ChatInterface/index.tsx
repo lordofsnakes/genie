@@ -4,6 +4,7 @@ import { useChat } from '@ai-sdk/react';
 import { TextStreamChatTransport, type UIMessage } from 'ai';
 import { getPublicApiBaseUrl, getPublicApiUrl } from '@/lib/backend-url';
 import { useBalance } from '@/hooks/useBalance';
+import { isDemoVerified } from '@/lib/demo-verification';
 import { HOME_CHAT_SEED_STORAGE_KEY } from '@/lib/home-genie';
 import { MiniKit } from '@worldcoin/minikit-js';
 import { useUserOperationReceipt } from '@worldcoin/minikit-react';
@@ -76,7 +77,11 @@ function shouldOfferYieldShortcut(text: string): boolean {
   const mentionsIdleCash = /(money|cash|usdc|balance|savings|save|invest|yield|vault)/.test(normalized);
   const mentionsSavingsGoal = /(vacation|trip|travel|holiday|getaway)/.test(normalized)
     && /(save|saving|savings|budget|put aside)/.test(normalized);
-  return (asksForAdvice && mentionsIdleCash) || mentionsSavingsGoal;
+  const explicitAllocationInstruction =
+    /(deposit|put|move|invest|allocate)/.test(normalized)
+    && /(\d+\s*%|\d+\s*percent)/.test(normalized)
+    && /(usdc|balance|money|cash|vault|yield)/.test(normalized);
+  return (asksForAdvice && mentionsIdleCash) || mentionsSavingsGoal || explicitAllocationInstruction;
 }
 
 function buildYieldRecommendationMessage(text: string, balance: number, amount: string): string {
@@ -101,6 +106,12 @@ function getYieldWalletDelayMs(message: string): number {
 
 function getYieldRejectionMessage(): string {
   return 'No problem. We can leave your USDC where it is for now, pick a smaller amount, or look at other ways to save toward your goal when you are ready.';
+}
+
+function shouldRequireLoanVerification(text: string): boolean {
+  const normalized = text.toLowerCase();
+  return /(lend|loan|front|spot|cover)/.test(normalized)
+    && /(\$?\d+|\d+\s*(usdc|usd|dollars?))/i.test(normalized);
 }
 
 function getConfirmStateStorageKey(chatStorageKey: string) {
@@ -171,6 +182,7 @@ export const ChatInterface = () => {
   const chatStorageKey = session?.user?.id ? getChatStorageKey(session.user.id) : null;
   const { balance, refetch: refetchBalance } = useBalance(session?.user?.walletAddress ?? '');
   const numericBalance = balance ? parseFloat(balance) : null;
+  const demoVerified = isDemoVerified(session?.user?.id);
   const chatSuggestedYieldAmount = numericBalance !== null && !Number.isNaN(numericBalance)
     ? getSuggestedYieldDepositAmount(numericBalance, 0.2)
     : '0.00';
@@ -513,7 +525,47 @@ export const ChatInterface = () => {
 
     setLastSendDebug(`sending "${text}" to ${API_URL || 'same-origin'}/api/chat`);
 
+    if (!demoVerified && shouldRequireLoanVerification(text)) {
+      setMessages((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          role: 'user',
+          parts: [{ type: 'text', text }],
+        },
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          parts: [{
+            type: 'text',
+            text: 'Verify with World ID in Profile before Genie can lend money or record new loans for you. Once you verify, I can help send the funds and track the debt together.',
+          }],
+        },
+      ]);
+      return;
+    }
+
     if (shouldOfferYieldShortcut(text) && numericBalance !== null && !Number.isNaN(numericBalance) && numericBalance > 0) {
+      if (!demoVerified) {
+        setMessages((current) => [
+          ...current,
+          {
+            id: crypto.randomUUID(),
+            role: 'user',
+            parts: [{ type: 'text', text }],
+          },
+          {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            parts: [{
+              type: 'text',
+              text: 'Verify with World ID in Profile before Genie can move money into yield strategies. Once you verify, I can help open the deposit transaction for you.',
+            }],
+          },
+        ]);
+        return;
+      }
+
       const recommendationText = buildYieldRecommendationMessage(
         text,
         numericBalance,
