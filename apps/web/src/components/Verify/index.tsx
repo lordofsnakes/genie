@@ -46,7 +46,7 @@ export const Verify = ({ onVerified }: VerifyProps = {}) => {
             type="button"
             onClick={onClickVerify}
             disabled={buttonState === 'pending'}
-            className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-headline font-extrabold uppercase tracking-widest !text-black active:scale-95 transition-transform duration-150 disabled:opacity-70 disabled:active:scale-100"
+            className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-white px-6 py-4 text-base font-headline font-black uppercase tracking-[0.18em] !text-black active:scale-95 transition-transform duration-150 disabled:opacity-70 disabled:active:scale-100"
             style={{ color: '#000000' }}
           >
             Verify with World ID
