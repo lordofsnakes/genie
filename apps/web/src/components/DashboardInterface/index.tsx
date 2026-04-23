@@ -191,84 +191,27 @@ export const DashboardInterface = () => {
             <span>Vault shares</span>
             <span>{yieldShares ? Number(yieldShares).toFixed(2) : '0.00'}</span>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (hasUsdcToDeposit) {
-                setShowYieldPreview(true);
-              }
-            }}
-            disabled={!hasUsdcToDeposit}
-            className="mt-5 w-full rounded-full bg-accent px-4 py-3 text-sm font-bold text-black disabled:opacity-60"
-          >
-            Add to yield position
-          </button>
-        </div>
-      </div>
-
-      {/* ── Quick actions ── */}
-      <div className="px-6 mb-8 grid grid-cols-3 gap-3">
-        {[
-          { label: 'Send', icon: 'north_east', onClick: () => setShowSend(true) },
-          { label: 'Receive', icon: 'south_west', onClick: () => setShowReceive(true) },
-          { label: 'Add Funds', icon: 'add', onClick: () => setShowAddFunds(true) },
-        ].map(({ label, icon, onClick }) => (
-          <button
-            key={label}
-            onClick={onClick}
-            className="flex flex-col items-center gap-2 bg-surface py-4 active:scale-95 transition-transform duration-150"
-          >
-            <span className="material-symbols-outlined text-accent text-xl">{icon}</span>
-            <span className="font-headline text-[10px] uppercase tracking-widest text-white/60 font-bold">
-              {label}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* ── Recent Transactions ── */}
-      <div className="px-6">
-        <p className="font-headline text-[10px] uppercase tracking-[0.25em] text-white/40 mb-4">
-          Recent Transactions
-        </p>
-        <div className="flex flex-col divide-y divide-white/5">
-          {txLoading ? (
-            <div className="py-4 flex flex-col gap-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-10 bg-white/5 animate-pulse rounded" />
-              ))}
-            </div>
-          ) : recentTransactions.length === 0 ? (
-            <p className="py-4 text-sm text-white/40">No transactions yet</p>
-          ) : (
-            recentTransactions.map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between py-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-surface flex items-center justify-center flex-shrink-0">
-                    <span className="material-symbols-outlined text-white/40 text-base">
-                      arrow_upward
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-white">
-                      Sent to {formatWallet(tx.recipientWallet)}
-                    </p>
-                    <p className="text-[11px] text-white/40">{formatRelativeTime(tx.createdAt)}</p>
-                  </div>
-                </div>
-                <p className="font-headline font-bold text-sm text-white/60">
-                  -{parseFloat(tx.amountUsd).toFixed(2)} USDC
-                </p>
-              </div>
-            ))
-          )}
+          <div className="mt-6">
+            <button
+              type="button"
+              onClick={() => {
+                if (hasUsdcToDeposit) {
+                  setShowYieldPreview(true);
+                }
+              }}
+              disabled={!hasUsdcToDeposit}
+              className="w-full rounded-full border border-accent/30 bg-accent px-4 py-3 text-sm font-bold text-black shadow-[0_0_0_4px_rgba(204,255,0,0.08)] disabled:opacity-60"
+            >
+              Add to yield position
+            </button>
+          </div>
         </div>
       </div>
 
       {/* ── Money Lent ── */}
       <div className="px-6 mt-8">
         <p className="font-headline text-[10px] uppercase tracking-[0.25em] text-white/40 mb-4">
-          Money Lent
+          Current Loans
         </p>
         <div className="flex flex-col divide-y divide-white/5">
           {debtLoading ? (
@@ -306,6 +249,65 @@ export const DashboardInterface = () => {
             ))
           )}
         </div>
+      </div>
+
+      {/* ── Recent Transactions ── */}
+      <div className="px-6 mt-8">
+        <p className="font-headline text-[10px] uppercase tracking-[0.25em] text-white/40 mb-4">
+          Recent Transactions
+        </p>
+        <div className="flex flex-col divide-y divide-white/5">
+          {txLoading ? (
+            <div className="py-4 flex flex-col gap-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-10 bg-white/5 animate-pulse rounded" />
+              ))}
+            </div>
+          ) : recentTransactions.length === 0 ? (
+            <p className="py-4 text-sm text-white/40">No transactions yet</p>
+          ) : (
+            recentTransactions.map((tx) => (
+              <div key={tx.id} className="flex items-center justify-between py-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-surface flex items-center justify-center flex-shrink-0">
+                    <span className="material-symbols-outlined text-white/40 text-base">
+                      arrow_upward
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">
+                      Sent to {formatWallet(tx.recipientWallet)}
+                    </p>
+                    <p className="text-[11px] text-white/40">{formatRelativeTime(tx.createdAt)}</p>
+                  </div>
+                </div>
+                <p className="font-headline font-bold text-sm text-white/60">
+                  -{parseFloat(tx.amountUsd).toFixed(2)} USDC
+                </p>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* ── Quick actions ── */}
+      <div className="px-6 mt-8 mb-8 grid grid-cols-3 gap-3">
+        {[
+          { label: 'Send', icon: 'north_east', onClick: () => setShowSend(true) },
+          { label: 'Receive', icon: 'south_west', onClick: () => setShowReceive(true) },
+          { label: 'Add Funds', icon: 'add', onClick: () => setShowAddFunds(true) },
+        ].map(({ label, icon, onClick }) => (
+          <button
+            key={label}
+            onClick={onClick}
+            className="flex flex-col items-center gap-2 bg-surface py-4 active:scale-95 transition-transform duration-150"
+          >
+            <span className="material-symbols-outlined text-accent text-xl">{icon}</span>
+            <span className="font-headline text-[10px] uppercase tracking-widest text-white/60 font-bold">
+              {label}
+            </span>
+          </button>
+        ))}
       </div>
 
     </div>
