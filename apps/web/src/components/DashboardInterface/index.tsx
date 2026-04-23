@@ -81,6 +81,7 @@ export const DashboardInterface = () => {
   const [showSend, setShowSend] = useState(false);
   const [showAddFunds, setShowAddFunds] = useState(false);
   const [showYieldPreview, setShowYieldPreview] = useState(false);
+  const [yieldDepositAmount, setYieldDepositAmount] = useState('');
   const [yieldStatus, setYieldStatus] = useState<'idle' | 'signing' | 'success' | 'error'>('idle');
   const [yieldError, setYieldError] = useState('');
   const walletAddress = session?.user?.walletAddress ?? '';
@@ -92,17 +93,28 @@ export const DashboardInterface = () => {
   const recentTransactions = transactions.slice(0, 5);
   const numericBalance = balance ? parseFloat(balance) : null;
   const hasUsdcToDeposit = !balanceLoading && !balanceError && numericBalance !== null && !Number.isNaN(numericBalance) && numericBalance > 0;
+  const suggestedDepositAmount = numericBalance !== null && !Number.isNaN(numericBalance)
+    ? Math.max(Math.floor((numericBalance * 0.6) * 100) / 100, 0)
+    : 0;
+  const parsedYieldDepositAmount = parseFloat(yieldDepositAmount);
+  const hasValidYieldDepositAmount = hasUsdcToDeposit
+    && !Number.isNaN(parsedYieldDepositAmount)
+    && parsedYieldDepositAmount > 0
+    && numericBalance !== null
+    && parsedYieldDepositAmount <= numericBalance;
   const genieSummary = balanceLoading
     ? 'Checking how much USDC you have available for a yield strategy.'
     : balanceError || numericBalance === null || Number.isNaN(numericBalance)
       ? 'I can suggest a World Chain USDC yield vault as soon as I can read your wallet balance.'
       : numericBalance <= 0
         ? 'Once you have USDC in your wallet, I can suggest a World Chain yield vault for it.'
-        : `I see you have $${numericBalance.toFixed(2)} in USDC. Let’s put that into a World Chain yield fund.`;
+        : `I see you have $${numericBalance.toFixed(2)} in USDC. Let’s put about $${suggestedDepositAmount.toFixed(2)} of that into a World Chain yield fund.`;
   const genieSummarySubtext = hasUsdcToDeposit
     ? 'Phase 2 POC: tap to preview one USDC vault on World Chain.'
     : 'Phase 2 POC: this card now reacts to the live balance in your wallet.';
-  const depositAmountDisplay = numericBalance?.toFixed(2) ?? '0.00';
+  const depositAmountDisplay = hasValidYieldDepositAmount
+    ? parsedYieldDepositAmount.toFixed(2)
+    : yieldDepositAmount;
 
   const handleCloseYieldPreview = () => {
     if (yieldStatus === 'signing') return;
@@ -112,13 +124,13 @@ export const DashboardInterface = () => {
   };
 
   const handleYieldDeposit = async () => {
-    if (!walletAddress || !hasUsdcToDeposit || numericBalance === null) return;
+    if (!walletAddress || !hasValidYieldDepositAmount || numericBalance === null) return;
 
     setYieldError('');
     setYieldStatus('signing');
 
     try {
-      const amountRaw = parseUnits(numericBalance.toFixed(2), 6);
+      const amountRaw = parseUnits(parsedYieldDepositAmount.toFixed(2), 6);
       const approveData = encodeFunctionData({
         abi: erc20ApproveAbi,
         functionName: 'approve',
@@ -173,7 +185,12 @@ export const DashboardInterface = () => {
         <button
           type="button"
           onClick={() => {
-            if (hasUsdcToDeposit) setShowYieldPreview(true);
+            if (hasUsdcToDeposit) {
+              setYieldDepositAmount(suggestedDepositAmount.toFixed(2));
+              setYieldStatus('idle');
+              setYieldError('');
+              setShowYieldPreview(true);
+            }
           }}
           disabled={!hasUsdcToDeposit}
           className="flex items-end gap-2 w-full text-left disabled:cursor-default"
@@ -371,9 +388,9 @@ export const DashboardInterface = () => {
 
             <div className="mt-5 rounded-2xl bg-surface p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-white/60">Available to deposit</span>
+                <span className="text-sm text-white/60">Available in wallet</span>
                 <span className="font-headline text-xl font-bold">
-                  ${depositAmountDisplay}
+                  ${numericBalance?.toFixed(2) ?? '0.00'}
                 </span>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -393,6 +410,51 @@ export const DashboardInterface = () => {
                   <p className="text-white/40 text-[11px] uppercase tracking-widest">APR</p>
                   <p className="mt-2 font-medium">{RE7_USDC_VAULT_APR}</p>
                 </div>
+              </div>
+              <div className="mt-4 rounded-2xl bg-white/5 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-white/40 text-[11px] uppercase tracking-widest">Suggested deposit</p>
+                    <p className="mt-2 text-sm text-white/60">
+                      Genie suggests parking 60% of your idle USDC in yield for this proof of concept.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setYieldDepositAmount(suggestedDepositAmount.toFixed(2))}
+                    className="rounded-full border border-white/10 px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-white/70"
+                  >
+                    Use 60%
+                  </button>
+                </div>
+                <label className="mt-4 block">
+                  <span className="text-white/40 text-[11px] uppercase tracking-widest">Deposit amount</span>
+                  <div className="mt-2 flex items-center rounded-2xl bg-background px-4 py-3">
+                    <span className="font-headline text-lg font-bold text-white mr-2">$</span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      max={numericBalance?.toFixed(2) ?? undefined}
+                      value={yieldDepositAmount}
+                      onChange={(e) => {
+                        setYieldDepositAmount(e.target.value);
+                        if (yieldStatus !== 'idle') setYieldStatus('idle');
+                        if (yieldError) setYieldError('');
+                      }}
+                      className="w-full bg-transparent text-white text-lg outline-none"
+                    />
+                  </div>
+                </label>
+                <p className="mt-2 text-[11px] text-white/40">
+                  Available: ${numericBalance?.toFixed(2) ?? '0.00'}
+                </p>
+                {!hasValidYieldDepositAmount && yieldDepositAmount.trim().length > 0 && (
+                  <p className="mt-2 text-[11px] text-red-300">
+                    Enter an amount above 0 and no more than your current USDC balance.
+                  </p>
+                )}
               </div>
               <p className="mt-4 text-sm text-white/60 leading-relaxed">
                 For the proof of concept, Genie will route your USDC into one curated World Chain vault. Tapping deposit opens one bundled wallet transaction to approve USDC and deposit it.
@@ -425,7 +487,7 @@ export const DashboardInterface = () => {
               <button
                 type="button"
                 onClick={handleYieldDeposit}
-                disabled={yieldStatus === 'signing' || isPollingYieldReceipt}
+                disabled={yieldStatus === 'signing' || isPollingYieldReceipt || !hasValidYieldDepositAmount}
                 className="rounded-full bg-accent px-4 py-3 text-sm font-bold text-black disabled:opacity-60"
               >
                 {yieldStatus === 'signing' || isPollingYieldReceipt
