@@ -9,12 +9,17 @@ import { useDebts } from '@/hooks/useDebts';
 import { useYieldPosition } from '@/hooks/useYieldPosition';
 import { useTransactions } from '@/hooks/useTransactions';
 import {
+  getHomeGenieSuggestion,
+  HOME_CHAT_SEED_STORAGE_KEY,
+} from '@/lib/home-genie';
+import {
   getSuggestedYieldDepositAmount,
   RE7_USDC_VAULT_ADDRESS,
   RE7_USDC_VAULT_APR,
   RE7_USDC_VAULT_PROVIDER,
 } from '@/lib/yield';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 function formatRelativeTime(dateStr: string): string {
@@ -45,6 +50,7 @@ function formatExpectedCollectionDate(dateStr: string): string {
 
 export const DashboardInterface = () => {
   const { data: session } = useSession();
+  const router = useRouter();
 
   const [showReceive, setShowReceive] = useState(false);
   const [showSend, setShowSend] = useState(false);
@@ -68,13 +74,11 @@ export const DashboardInterface = () => {
   const suggestedDepositAmount = numericBalance !== null && !Number.isNaN(numericBalance)
     ? getSuggestedYieldDepositAmount(numericBalance, 0.6)
     : '0.00';
-  const genieSummary = balanceLoading
-    ? 'Checking how much USDC you have available for a yield strategy.'
-      : balanceError || numericBalance === null || Number.isNaN(numericBalance)
-      ? 'I can suggest a World Chain USDC yield vault as soon as I can read your wallet balance.'
-      : numericBalance <= 0
-        ? 'Once you have USDC in your wallet, I can suggest a World Chain yield vault for it.'
-        : `I see you have $${numericBalance.toFixed(2)} in USDC. Let’s put about $${suggestedDepositAmount} of that into a World Chain yield fund. Tap here to make a deposit.`;
+  const homeSuggestion = getHomeGenieSuggestion({
+    balanceAmount: numericBalance,
+    suggestedDepositAmount,
+    userId,
+  });
 
   return (
     <>
@@ -93,12 +97,15 @@ export const DashboardInterface = () => {
         <button
           type="button"
           onClick={() => {
-            if (hasUsdcToDeposit) {
-              setShowYieldPreview(true);
-            }
+            window.sessionStorage.setItem(HOME_CHAT_SEED_STORAGE_KEY, JSON.stringify({
+              userId,
+              message: homeSuggestion.message,
+              followUp: homeSuggestion.followUp,
+              createdAt: Date.now(),
+            }));
+            router.push('/chat');
           }}
-          disabled={!hasUsdcToDeposit}
-          className="flex items-end gap-2 w-full text-left disabled:cursor-default"
+          className="flex items-end gap-2 w-full text-left"
         >
           <div className="flex-shrink-0 w-20 h-24 self-end">
             <img
@@ -128,7 +135,7 @@ export const DashboardInterface = () => {
                 Genie
               </span>
             </div>
-            <p className="text-sm leading-relaxed">{genieSummary}</p>
+            <p className="text-sm leading-relaxed">{homeSuggestion.message}</p>
           </div>
         </button>
       </div>

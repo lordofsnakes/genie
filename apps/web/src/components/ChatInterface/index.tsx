@@ -4,6 +4,7 @@ import { useChat } from '@ai-sdk/react';
 import { TextStreamChatTransport, type UIMessage } from 'ai';
 import { getPublicApiBaseUrl, getPublicApiUrl } from '@/lib/backend-url';
 import { useBalance } from '@/hooks/useBalance';
+import { HOME_CHAT_SEED_STORAGE_KEY } from '@/lib/home-genie';
 import { MiniKit } from '@worldcoin/minikit-js';
 import { useUserOperationReceipt } from '@worldcoin/minikit-react';
 import { useSession } from 'next-auth/react';
@@ -264,6 +265,45 @@ export const ChatInterface = () => {
       JSON.stringify(cancelledConfirmTxIds),
     );
   }, [cancelledConfirmTxIds, chatStorageKey]);
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const raw = window.sessionStorage.getItem(HOME_CHAT_SEED_STORAGE_KEY);
+    if (!raw) return;
+
+    try {
+      const parsed = JSON.parse(raw) as {
+        userId?: string;
+        message?: string;
+        followUp?: string;
+      };
+
+      if (parsed.userId !== session.user.id || !parsed.message || !parsed.followUp) {
+        window.sessionStorage.removeItem(HOME_CHAT_SEED_STORAGE_KEY);
+        return;
+      }
+
+      const seededMessage = parsed.message;
+      const seededFollowUp = parsed.followUp;
+      window.sessionStorage.removeItem(HOME_CHAT_SEED_STORAGE_KEY);
+      setMessages((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          parts: [{ type: 'text', text: seededMessage }],
+        },
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          parts: [{ type: 'text', text: seededFollowUp }],
+        },
+      ]);
+    } catch {
+      window.sessionStorage.removeItem(HOME_CHAT_SEED_STORAGE_KEY);
+    }
+  }, [session?.user?.id, setMessages]);
 
   const scrollChatToBottom = (behavior: ScrollBehavior = 'smooth') => {
     const container = scrollRef.current;
