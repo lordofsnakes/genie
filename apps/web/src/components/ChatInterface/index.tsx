@@ -66,6 +66,29 @@ function hasPendingTransactionPayload(text: string): boolean {
   );
 }
 
+function getConfirmStateStorageKey(chatStorageKey: string) {
+  return `${chatStorageKey}${CHAT_CONFIRM_STATE_SUFFIX}`;
+}
+
+function isPersistedTxIdArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
+}
+
+function extractWalletTxIdsFromMessages(messages: UIMessage[]): Set<string> {
+  return new Set(
+    messages.flatMap((message) => {
+      if (message.role !== 'assistant') return [];
+      const textContent = message.parts
+        .filter((part) => part.type === 'text')
+        .map((part) => part.text ?? '')
+        .join('');
+
+      const walletTxData = parseWalletTransactionRequired(textContent);
+      return walletTxData ? [walletTxData.txId] : [];
+    }),
+  );
+}
+
 const API_URL = getPublicApiBaseUrl();
 const SHOW_CHAT_DEBUG = process.env.NEXT_PUBLIC_SHOW_CHAT_DEBUG === 'true';
 
@@ -73,6 +96,7 @@ const SHOW_CHAT_DEBUG = process.env.NEXT_PUBLIC_SHOW_CHAT_DEBUG === 'true';
 const NAV_HEIGHT = 148;
 const COMPOSER_GAP = 12;
 const CHAT_STORAGE_PREFIX = 'genie-chat-history';
+const CHAT_CONFIRM_STATE_SUFFIX = ':confirm-state';
 
 const PLACEHOLDERS = [
   'Go off.',
@@ -103,6 +127,7 @@ export const ChatInterface = () => {
   const hydratedStorageKey = useRef<string | null>(null);
   const [walletExecutionState, setWalletExecutionState] = useState<Record<string, 'pending' | 'success' | 'error'>>({});
   const [walletExecutionError, setWalletExecutionError] = useState<Record<string, string>>({});
+  const [cancelledConfirmTxIds, setCancelledConfirmTxIds] = useState<string[]>([]);
   const chatStorageKey = session?.user?.id ? getChatStorageKey(session.user.id) : null;
 
   const transport = useMemo(
@@ -137,9 +162,20 @@ export const ChatInterface = () => {
     handledWalletTxIds.current = new Set();
     setWalletExecutionState({});
     setWalletExecutionError({});
+    setCancelledConfirmTxIds([]);
 
     try {
       const persisted = window.sessionStorage.getItem(chatStorageKey);
+      const persistedConfirmState = window.sessionStorage.getItem(getConfirmStateStorageKey(chatStorageKey));
+      if (persistedConfirmState) {
+        const parsedConfirmState = JSON.parse(persistedConfirmState);
+        if (isPersistedTxIdArray(parsedConfirmState)) {
+          setCancelledConfirmTxIds(parsedConfirmState);
+        } else {
+          window.sessionStorage.removeItem(getConfirmStateStorageKey(chatStorageKey));
+        }
+      }
+
       if (!persisted) {
         setMessages([]);
         return;
@@ -152,9 +188,11 @@ export const ChatInterface = () => {
         return;
       }
 
+      handledWalletTxIds.current = extractWalletTxIdsFromMessages(parsed);
       setMessages(parsed);
     } catch {
       window.sessionStorage.removeItem(chatStorageKey);
+      window.sessionStorage.removeItem(getConfirmStateStorageKey(chatStorageKey));
       setMessages([]);
     }
   }, [chatStorageKey, setMessages]);
@@ -163,6 +201,14 @@ export const ChatInterface = () => {
     if (!chatStorageKey || hydratedStorageKey.current !== chatStorageKey) return;
     window.sessionStorage.setItem(chatStorageKey, JSON.stringify(messages));
   }, [chatStorageKey, messages]);
+
+  useEffect(() => {
+    if (!chatStorageKey || hydratedStorageKey.current !== chatStorageKey) return;
+    window.sessionStorage.setItem(
+      getConfirmStateStorageKey(chatStorageKey),
+      JSON.stringify(cancelledConfirmTxIds),
+    );
+  }, [cancelledConfirmTxIds, chatStorageKey]);
 
   const scrollChatToBottom = (behavior: ScrollBehavior = 'smooth') => {
     const container = scrollRef.current;
@@ -424,8 +470,14 @@ export const ChatInterface = () => {
                 key={message.id}
                 parts={message.parts}
                 userId={session?.user?.id ?? ''}
+                cancelledConfirmTxIds={cancelledConfirmTxIds}
                 walletExecutionState={walletExecutionState}
                 walletExecutionError={walletExecutionError}
+                onConfirmCancel={(txId: string) => {
+                  setCancelledConfirmTxIds((current) => (
+                    current.includes(txId) ? current : [...current, txId]
+                  ));
+                }}
                 onContactSelect={(contact: ContactData) => {
                   if (status !== 'ready') return;
                   sendMessage(
@@ -584,14 +636,18 @@ function AiMessageBubble({
   parts,
   onContactSelect,
   userId,
+  cancelledConfirmTxIds,
   walletExecutionState,
   walletExecutionError,
+  onConfirmCancel,
 }: {
   parts: Array<{ type: string; text?: string }>;
   onContactSelect: (contact: ContactData) => void;
   userId: string;
+  cancelledConfirmTxIds: string[];
   walletExecutionState: Record<string, 'pending' | 'success' | 'error'>;
   walletExecutionError: Record<string, string>;
+  onConfirmCancel: (txId: string) => void;
 }) {
   const textContent = parts
     .filter((p) => p.type === 'text')
@@ -680,7 +736,12 @@ function AiMessageBubble({
             <PendingTransactionCard />
           )}
           {confirmData && (
-            <ConfirmCard data={confirmData} userId={userId} />
+            <ConfirmCard
+              data={confirmData}
+              userId={userId}
+              initialState={cancelledConfirmTxIds.includes(confirmData.txId) ? 'cancelled' : 'idle'}
+              onCancel={() => onConfirmCancel(confirmData.txId)}
+            />
           )}
         </div>
       </div>
