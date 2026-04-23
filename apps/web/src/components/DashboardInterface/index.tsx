@@ -71,8 +71,15 @@ export const DashboardInterface = () => {
   } = useYieldPosition(walletAddress, RE7_USDC_VAULT_ADDRESS);
   const recentTransactions = transactions.slice(0, 5);
   const numericBalance = balance ? parseFloat(balance) : null;
+  const numericYieldPosition = yieldPositionUsd ? parseFloat(yieldPositionUsd) : 0;
   const demoVerified = isDemoVerified(userId);
   const hasUsdcToDeposit = !balanceLoading && !balanceError && numericBalance !== null && !Number.isNaN(numericBalance) && numericBalance > 0;
+  const hasYieldPosition =
+    !yieldPositionLoading &&
+    !yieldPositionError &&
+    yieldPositionUsd !== null &&
+    !Number.isNaN(numericYieldPosition) &&
+    numericYieldPosition > 0;
   const suggestedDepositAmount = numericBalance !== null && !Number.isNaN(numericBalance)
     ? getSuggestedYieldDepositAmount(numericBalance, 0.6)
     : '0.00';
@@ -158,57 +165,50 @@ export const DashboardInterface = () => {
         )}
       </div>
 
-      {/* ── Yield Position ── */}
-      <div className="px-6 mb-8">
-        <p className="font-headline text-[10px] uppercase tracking-[0.25em] text-white/40 mb-4">
-          Yield Position
-        </p>
-        <div className="bg-surface rounded-[24px] p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="font-headline text-[10px] uppercase tracking-widest text-accent font-bold">
-                {RE7_USDC_VAULT_PROVIDER}
-              </p>
-              <h3 className="mt-2 font-headline text-2xl font-extrabold tracking-tighter text-white">
-                {yieldPositionLoading
-                  ? 'Loading...'
-                  : yieldPositionError
-                    ? '$--.--'
-                    : `$${yieldPositionUsd ?? '0.00'}`}
-              </h3>
-              <p className="mt-2 text-sm text-white/55">
-                {yieldPositionError
-                  ? 'Could not load your current vault position.'
-                  : yieldPositionUsd === '0.00'
-                    ? 'No funds are currently parked in this USDC vault.'
-                    : 'Current estimated asset value in the vault.'}
-              </p>
+      {hasYieldPosition ? (
+        <div className="px-6 mb-8">
+          <p className="font-headline text-[10px] uppercase tracking-[0.25em] text-white/40 mb-4">
+            Yield Position
+          </p>
+          <div className="bg-surface rounded-[24px] p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-headline text-[10px] uppercase tracking-widest text-accent font-bold">
+                  {RE7_USDC_VAULT_PROVIDER}
+                </p>
+                <h3 className="mt-2 font-headline text-2xl font-extrabold tracking-tighter text-white">
+                  ${yieldPositionUsd}
+                </h3>
+                <p className="mt-2 text-sm text-white/55">
+                  Current estimated asset value in the vault.
+                </p>
+              </div>
+              <div className="rounded-2xl bg-white/5 px-4 py-3 text-right min-w-[110px]">
+                <p className="text-[11px] uppercase tracking-widest text-white/35">APR</p>
+                <p className="mt-2 font-headline text-lg font-bold text-white">{RE7_USDC_VAULT_APR}</p>
+              </div>
             </div>
-            <div className="rounded-2xl bg-white/5 px-4 py-3 text-right min-w-[110px]">
-              <p className="text-[11px] uppercase tracking-widest text-white/35">APR</p>
-              <p className="mt-2 font-headline text-lg font-bold text-white">{RE7_USDC_VAULT_APR}</p>
+            <div className="mt-4 flex items-center justify-between text-sm text-white/55">
+              <span>Vault shares</span>
+              <span>{yieldShares ? Number(yieldShares).toFixed(2) : '0.00'}</span>
             </div>
-          </div>
-          <div className="mt-4 flex items-center justify-between text-sm text-white/55">
-            <span>Vault shares</span>
-            <span>{yieldShares ? Number(yieldShares).toFixed(2) : '0.00'}</span>
-          </div>
-          <div className="mt-6">
-            <button
-              type="button"
-              onClick={() => {
-                if (hasUsdcToDeposit) {
-                  setShowYieldPreview(true);
-                }
-              }}
-              disabled={!hasUsdcToDeposit}
-              className="w-full rounded-full border border-accent/30 bg-accent px-6 py-4 text-base font-headline font-black tracking-[0.04em] text-black shadow-[0_0_0_4px_rgba(204,255,0,0.08)] disabled:opacity-60"
-            >
-              Add to yield position
-            </button>
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  if (hasUsdcToDeposit) {
+                    setShowYieldPreview(true);
+                  }
+                }}
+                disabled={!hasUsdcToDeposit}
+                className="w-full rounded-full border border-accent/30 bg-accent px-6 py-4 text-base font-headline font-black tracking-[0.04em] text-black shadow-[0_0_0_4px_rgba(204,255,0,0.08)] disabled:opacity-60"
+              >
+                Add to yield position
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
 
       {/* ── Money Lent ── */}
       <div className="px-6 mt-8">
