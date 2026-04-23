@@ -78,6 +78,18 @@ function shouldOfferYieldShortcut(text: string): boolean {
   return (asksForAdvice && mentionsIdleCash) || mentionsSavingsGoal;
 }
 
+function buildYieldRecommendationMessage(text: string, balance: number, amount: string): string {
+  const normalized = text.toLowerCase();
+  const mentionsTravelGoal = /(vacation|trip|travel|holiday|getaway)/.test(normalized);
+  const mentionsSavingGoal = /(save|saving|savings|budget|plan|financials)/.test(normalized);
+
+  if (mentionsTravelGoal || mentionsSavingGoal) {
+    return `Yes, I can help you plan for that. You have $${balance.toFixed(2)} in USDC right now, and a simple way to make progress is to put a smaller slice of it to work instead of letting it sit idle. How about we move $${amount} into a USDC yield vault on World Chain so it can earn while you keep the rest liquid? I’ll open the wallet transaction in a second.`;
+  }
+
+  return `Yes, I can help with that. You have $${balance.toFixed(2)} in USDC sitting idle, and one reasonable next step is to put a conservative portion of it into yield while keeping the rest available. How about we move $${amount} into a USDC vault on World Chain? I’ll open the wallet transaction in a second.`;
+}
+
 function getConfirmStateStorageKey(chatStorageKey: string) {
   return `${chatStorageKey}${CHAT_CONFIRM_STATE_SUFFIX}`;
 }
@@ -436,7 +448,11 @@ export const ChatInterface = () => {
     setLastSendDebug(`sending "${text}" to ${API_URL || 'same-origin'}/api/chat`);
 
     if (shouldOfferYieldShortcut(text) && numericBalance !== null && !Number.isNaN(numericBalance) && numericBalance > 0) {
-      const recommendationText = `You have $${numericBalance.toFixed(2)} in USDC. I’d put about $${chatSuggestedYieldAmount} into a yield vault so it keeps working for you while staying in USDC. I’m opening the wallet transaction now.`;
+      const recommendationText = buildYieldRecommendationMessage(
+        text,
+        numericBalance,
+        chatSuggestedYieldAmount,
+      );
       setMessages((current) => [
         ...current,
         {
@@ -450,49 +466,52 @@ export const ChatInterface = () => {
           parts: [{ type: 'text', text: recommendationText }],
         },
       ]);
-      executeMiniKitTransactionBundle(
-        buildYieldDepositBundle(
-          session?.user?.walletAddress as `0x${string}`,
-          chatSuggestedYieldAmount,
-        ),
-      )
-        .then(async ({ userOpHash }) => {
-          const receipt = await poll(userOpHash);
-          const finalHash = extractMiniKitTransactionHash(receipt) ?? userOpHash;
-          console.log('[chat][yield] deposit completed', {
-            userOpHash,
-            finalHash,
-            amountUsd: chatSuggestedYieldAmount,
+
+      window.setTimeout(() => {
+        executeMiniKitTransactionBundle(
+          buildYieldDepositBundle(
+            session?.user?.walletAddress as `0x${string}`,
+            chatSuggestedYieldAmount,
+          ),
+        )
+          .then(async ({ userOpHash }) => {
+            const receipt = await poll(userOpHash);
+            const finalHash = extractMiniKitTransactionHash(receipt) ?? userOpHash;
+            console.log('[chat][yield] deposit completed', {
+              userOpHash,
+              finalHash,
+              amountUsd: chatSuggestedYieldAmount,
+            });
+            refetchBalance();
+            setMessages((current) => [
+              ...current,
+              {
+                id: crypto.randomUUID(),
+                role: 'assistant',
+                parts: [{
+                  type: 'text',
+                  text: `Yield deposit submitted for $${chatSuggestedYieldAmount} USDC.`,
+                }],
+              },
+            ]);
+          })
+          .catch((err) => {
+            console.error('[chat][yield] deposit failed', err);
+            setMessages((current) => [
+              ...current,
+              {
+                id: crypto.randomUUID(),
+                role: 'assistant',
+                parts: [{
+                  type: 'text',
+                  text: err instanceof Error
+                    ? `I couldn’t open the yield transaction: ${err.message}`
+                    : 'I couldn’t open the yield transaction.',
+                }],
+              },
+            ]);
           });
-          refetchBalance();
-          setMessages((current) => [
-            ...current,
-            {
-              id: crypto.randomUUID(),
-              role: 'assistant',
-              parts: [{
-                type: 'text',
-                text: `Yield deposit submitted for $${chatSuggestedYieldAmount} USDC.`,
-              }],
-            },
-          ]);
-        })
-        .catch((err) => {
-          console.error('[chat][yield] deposit failed', err);
-          setMessages((current) => [
-            ...current,
-            {
-              id: crypto.randomUUID(),
-              role: 'assistant',
-              parts: [{
-                type: 'text',
-                text: err instanceof Error
-                  ? `I couldn’t open the yield transaction: ${err.message}`
-                  : 'I couldn’t open the yield transaction.',
-              }],
-            },
-          ]);
-        });
+      }, 1400);
       return;
     }
 
