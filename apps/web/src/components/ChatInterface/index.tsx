@@ -90,6 +90,18 @@ function buildYieldRecommendationMessage(text: string, balance: number, amount: 
   return `Yes, I can help with that. You have $${balance.toFixed(2)} in USDC sitting idle, and one reasonable next step is to put a conservative portion of it into yield while keeping the rest available. How about we move $${amount} into a USDC vault on World Chain? I’ll open the wallet transaction in a second.`;
 }
 
+function getYieldResponseDelayMs(message: string): number {
+  return Math.min(Math.max(1200, 900 + message.length * 6), 2600);
+}
+
+function getYieldWalletDelayMs(message: string): number {
+  return Math.min(Math.max(3600, 2400 + message.length * 16), 7000);
+}
+
+function getYieldRejectionMessage(): string {
+  return 'No problem. We can leave your USDC where it is for now, pick a smaller amount, or look at other ways to save toward your goal when you are ready.';
+}
+
 function getConfirmStateStorageKey(chatStorageKey: string) {
   return `${chatStorageKey}${CHAT_CONFIRM_STATE_SUFFIX}`;
 }
@@ -467,6 +479,8 @@ export const ChatInterface = () => {
         numericBalance,
         chatSuggestedYieldAmount,
       );
+      const responseDelayMs = getYieldResponseDelayMs(recommendationText);
+      const walletDelayMs = getYieldWalletDelayMs(recommendationText);
       setMessages((current) => [
         ...current,
         {
@@ -487,7 +501,7 @@ export const ChatInterface = () => {
           },
         ]);
         setLocalYieldThinking(false);
-      }, 1400);
+      }, responseDelayMs);
 
       yieldWalletTimeoutRef.current = window.setTimeout(() => {
         executeMiniKitTransactionBundle(
@@ -519,6 +533,8 @@ export const ChatInterface = () => {
           })
           .catch((err) => {
             console.error('[chat][yield] deposit failed', err);
+            const errMessage = err instanceof Error ? err.message : '';
+            const didUserReject = /user[_\s-]?rejected/i.test(errMessage);
             setMessages((current) => [
               ...current,
               {
@@ -526,14 +542,16 @@ export const ChatInterface = () => {
                 role: 'assistant',
                 parts: [{
                   type: 'text',
-                text: err instanceof Error
-                    ? `I couldn’t open the yield transaction: ${err.message}`
-                    : 'I couldn’t open the yield transaction.',
+                  text: didUserReject
+                    ? getYieldRejectionMessage()
+                    : err instanceof Error
+                      ? `I couldn’t open the yield transaction: ${err.message}`
+                      : 'I couldn’t open the yield transaction.',
                 }],
               },
             ]);
           });
-      }, 4700);
+      }, walletDelayMs);
       return;
     }
 
