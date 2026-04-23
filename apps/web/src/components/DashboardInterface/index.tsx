@@ -41,6 +41,7 @@ export const DashboardInterface = () => {
   const [showReceive, setShowReceive] = useState(false);
   const [showSend, setShowSend] = useState(false);
   const [showAddFunds, setShowAddFunds] = useState(false);
+  const [showYieldPreview, setShowYieldPreview] = useState(false);
   const walletAddress = session?.user?.walletAddress ?? '';
   const userId = session?.user?.id ?? '';
   const { balance, loading: balanceLoading, error: balanceError, refetch: refetchBalance } = useBalance(walletAddress);
@@ -48,6 +49,7 @@ export const DashboardInterface = () => {
   const { debts, loading: debtLoading, error: debtError } = useDebts(userId);
   const recentTransactions = transactions.slice(0, 5);
   const numericBalance = balance ? parseFloat(balance) : null;
+  const hasUsdcToDeposit = !balanceLoading && !balanceError && numericBalance !== null && !Number.isNaN(numericBalance) && numericBalance > 0;
   const genieSummary = balanceLoading
     ? 'Checking how much USDC you have available for a yield strategy.'
     : balanceError || numericBalance === null || Number.isNaN(numericBalance)
@@ -55,9 +57,9 @@ export const DashboardInterface = () => {
       : numericBalance <= 0
         ? 'Once you have USDC in your wallet, I can suggest a World Chain yield vault for it.'
         : `I see you have $${numericBalance.toFixed(2)} in USDC. Let’s put that into a World Chain yield fund.`;
-  const genieSummarySubtext = numericBalance && numericBalance > 0
-    ? 'Phase 1 POC: next we will wire this suggestion into a real deposit flow.'
-    : 'Phase 1 POC: this card now reacts to the live balance in your wallet.';
+  const genieSummarySubtext = hasUsdcToDeposit
+    ? 'Phase 2 POC: tap to preview one USDC vault on World Chain.'
+    : 'Phase 2 POC: this card now reacts to the live balance in your wallet.';
 
   return (
     <>
@@ -73,7 +75,14 @@ export const DashboardInterface = () => {
 
       {/* ── Genie finance summary ── */}
       <div className="px-6 mb-8">
-        <div className="flex items-end gap-2 w-full text-left">
+        <button
+          type="button"
+          onClick={() => {
+            if (hasUsdcToDeposit) setShowYieldPreview(true);
+          }}
+          disabled={!hasUsdcToDeposit}
+          className="flex items-end gap-2 w-full text-left disabled:cursor-default"
+        >
           <div className="flex-shrink-0 w-20 h-24 self-end">
             <img
               src="/genie.png"
@@ -107,7 +116,7 @@ export const DashboardInterface = () => {
               {genieSummarySubtext}
             </p>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* ── Total Balance ── */}
@@ -242,6 +251,69 @@ export const DashboardInterface = () => {
       )}
       {showAddFunds && walletAddress && (
         <AddFundsModal address={walletAddress} onClose={() => setShowAddFunds(false)} />
+      )}
+      {showYieldPreview && (
+        <div className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm px-4 py-6 flex items-end">
+          <div className="w-full max-w-md mx-auto bg-background border border-white/10 rounded-[28px] p-6 text-white">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-headline text-[10px] uppercase tracking-[0.25em] text-accent mb-2">
+                  Yield Preview
+                </p>
+                <h2 className="font-headline text-2xl font-extrabold tracking-tighter">
+                  Morpho USDC Vault
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowYieldPreview(false)}
+                className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center active:scale-95 transition-transform"
+                aria-label="Close yield preview"
+              >
+                <span className="material-symbols-outlined text-white/60 text-lg">close</span>
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-2xl bg-surface p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-white/60">Available to deposit</span>
+                <span className="font-headline text-xl font-bold">
+                  ${numericBalance?.toFixed(2) ?? '0.00'}
+                </span>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-xl bg-white/5 p-3">
+                  <p className="text-white/40 text-[11px] uppercase tracking-widest">Asset</p>
+                  <p className="mt-2 font-medium">USDC</p>
+                </div>
+                <div className="rounded-xl bg-white/5 p-3">
+                  <p className="text-white/40 text-[11px] uppercase tracking-widest">Chain</p>
+                  <p className="mt-2 font-medium">World Chain</p>
+                </div>
+              </div>
+              <p className="mt-4 text-sm text-white/60 leading-relaxed">
+                For the proof of concept, Genie will route your USDC into one curated vault. The next phase wires this preview into the wallet transaction you can sign.
+              </p>
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setShowYieldPreview(false)}
+                className="rounded-full border border-white/10 px-4 py-3 text-sm font-medium text-white/80"
+              >
+                Not now
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowYieldPreview(false)}
+                className="rounded-full bg-accent px-4 py-3 text-sm font-bold text-black"
+              >
+                Deposit next
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
