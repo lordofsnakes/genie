@@ -7,11 +7,7 @@ import { useBalance } from '@/hooks/useBalance';
 import { useDebts } from '@/hooks/useDebts';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-
-const GENIE_SUMMARY =
-  "Saving for a trip? I can help you limit dining out spend to get there faster.";
 
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr);
@@ -41,7 +37,6 @@ function formatExpectedCollectionDate(dateStr: string): string {
 
 export const DashboardInterface = () => {
   const { data: session } = useSession();
-  const router = useRouter();
 
   const [showReceive, setShowReceive] = useState(false);
   const [showSend, setShowSend] = useState(false);
@@ -52,6 +47,17 @@ export const DashboardInterface = () => {
   const { transactions, loading: txLoading } = useTransactions(userId);
   const { debts, loading: debtLoading, error: debtError } = useDebts(userId);
   const recentTransactions = transactions.slice(0, 5);
+  const numericBalance = balance ? parseFloat(balance) : null;
+  const genieSummary = balanceLoading
+    ? 'Checking how much USDC you have available for a yield strategy.'
+    : balanceError || numericBalance === null || Number.isNaN(numericBalance)
+      ? 'I can suggest a World Chain USDC yield vault as soon as I can read your wallet balance.'
+      : numericBalance <= 0
+        ? 'Once you have USDC in your wallet, I can suggest a World Chain yield vault for it.'
+        : `I see you have $${numericBalance.toFixed(2)} in USDC. Let’s put that into a World Chain yield fund.`;
+  const genieSummarySubtext = numericBalance && numericBalance > 0
+    ? 'Phase 1 POC: next we will wire this suggestion into a real deposit flow.'
+    : 'Phase 1 POC: this card now reacts to the live balance in your wallet.';
 
   return (
     <>
@@ -67,10 +73,7 @@ export const DashboardInterface = () => {
 
       {/* ── Genie finance summary ── */}
       <div className="px-6 mb-8">
-        <button
-          onClick={() => router.push('/chat')}
-          className="flex items-end gap-2 w-full text-left active:opacity-80 transition-opacity duration-150"
-        >
+        <div className="flex items-end gap-2 w-full text-left">
           <div className="flex-shrink-0 w-20 h-24 self-end">
             <img
               src="/genie.png"
@@ -99,9 +102,12 @@ export const DashboardInterface = () => {
                 Genie
               </span>
             </div>
-            <p className="text-sm leading-relaxed">{GENIE_SUMMARY}</p>
+            <p className="text-sm leading-relaxed">{genieSummary}</p>
+            <p className="mt-3 text-[11px] uppercase tracking-widest text-white/35">
+              {genieSummarySubtext}
+            </p>
           </div>
-        </button>
+        </div>
       </div>
 
       {/* ── Total Balance ── */}
