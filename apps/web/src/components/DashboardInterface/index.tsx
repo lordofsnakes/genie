@@ -5,6 +5,7 @@ import { ReceiveModal } from '@/components/ReceiveModal';
 import { SendModal } from '@/components/SendModal';
 import { useBalance } from '@/hooks/useBalance';
 import { useDebts } from '@/hooks/useDebts';
+import { useYieldPosition } from '@/hooks/useYieldPosition';
 import { useTransactions } from '@/hooks/useTransactions';
 import {
   executeMiniKitTransactionBundle,
@@ -89,6 +90,13 @@ export const DashboardInterface = () => {
   const { balance, loading: balanceLoading, error: balanceError, refetch: refetchBalance } = useBalance(walletAddress);
   const { transactions, loading: txLoading } = useTransactions(userId);
   const { debts, loading: debtLoading, error: debtError } = useDebts(userId);
+  const {
+    positionUsd: yieldPositionUsd,
+    shares: yieldShares,
+    loading: yieldPositionLoading,
+    error: yieldPositionError,
+    refetch: refetchYieldPosition,
+  } = useYieldPosition(walletAddress, RE7_USDC_VAULT_ADDRESS);
   const { poll, isLoading: isPollingYieldReceipt } = useUserOperationReceipt({ client: worldChainReceiptClient });
   const recentTransactions = transactions.slice(0, 5);
   const numericBalance = balance ? parseFloat(balance) : null;
@@ -161,6 +169,7 @@ export const DashboardInterface = () => {
 
       setYieldStatus('success');
       refetchBalance();
+      refetchYieldPosition();
     } catch (err) {
       console.error('[yield] deposit failed', err);
       setYieldError(err instanceof Error ? err.message : 'Vault deposit failed. Try again.');
@@ -245,6 +254,59 @@ export const DashboardInterface = () => {
             ${balance ?? '0.00'}
           </p>
         )}
+      </div>
+
+      {/* ── Yield Position ── */}
+      <div className="px-6 mb-8">
+        <p className="font-headline text-[10px] uppercase tracking-[0.25em] text-white/40 mb-4">
+          Yield Position
+        </p>
+        <div className="bg-surface rounded-[24px] p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="font-headline text-[10px] uppercase tracking-widest text-accent font-bold">
+                {RE7_USDC_VAULT_PROVIDER}
+              </p>
+              <h3 className="mt-2 font-headline text-2xl font-extrabold tracking-tighter text-white">
+                {yieldPositionLoading
+                  ? 'Loading...'
+                  : yieldPositionError
+                    ? '$--.--'
+                    : `$${yieldPositionUsd ?? '0.00'}`}
+              </h3>
+              <p className="mt-2 text-sm text-white/55">
+                {yieldPositionError
+                  ? 'Could not load your current vault position.'
+                  : yieldPositionUsd === '0.00'
+                    ? 'No funds are currently parked in this USDC vault.'
+                    : 'Current estimated asset value in the vault.'}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-white/5 px-4 py-3 text-right min-w-[110px]">
+              <p className="text-[11px] uppercase tracking-widest text-white/35">APR</p>
+              <p className="mt-2 font-headline text-lg font-bold text-white">{RE7_USDC_VAULT_APR}</p>
+            </div>
+          </div>
+          <div className="mt-4 flex items-center justify-between text-sm text-white/55">
+            <span>Vault shares</span>
+            <span>{yieldShares ? Number(yieldShares).toFixed(2) : '0.00'}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (hasUsdcToDeposit) {
+                setYieldDepositAmount(suggestedDepositAmount.toFixed(2));
+                setYieldStatus('idle');
+                setYieldError('');
+                setShowYieldPreview(true);
+              }
+            }}
+            disabled={!hasUsdcToDeposit}
+            className="mt-5 w-full rounded-full bg-accent px-4 py-3 text-sm font-bold text-black disabled:opacity-60"
+          >
+            Add to yield position
+          </button>
+        </div>
       </div>
 
       {/* ── Quick actions ── */}
