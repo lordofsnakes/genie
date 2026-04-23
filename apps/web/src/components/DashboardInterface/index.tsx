@@ -116,10 +116,7 @@ export const DashboardInterface = () => {
       ? 'I can suggest a World Chain USDC yield vault as soon as I can read your wallet balance.'
       : numericBalance <= 0
         ? 'Once you have USDC in your wallet, I can suggest a World Chain yield vault for it.'
-        : `I see you have $${numericBalance.toFixed(2)} in USDC. Let’s put about $${suggestedDepositAmount.toFixed(2)} of that into a World Chain yield fund.`;
-  const genieSummarySubtext = hasUsdcToDeposit
-    ? 'Phase 2 POC: tap to preview one USDC vault on World Chain.'
-    : 'Phase 2 POC: this card now reacts to the live balance in your wallet.';
+        : `I see you have $${numericBalance.toFixed(2)} in USDC. Let’s put about $${suggestedDepositAmount.toFixed(2)} of that into a World Chain yield fund. Tap here to make a deposit.`;
   const depositAmountDisplay = hasValidYieldDepositAmount
     ? parsedYieldDepositAmount.toFixed(2)
     : yieldDepositAmount;
@@ -233,9 +230,6 @@ export const DashboardInterface = () => {
               </span>
             </div>
             <p className="text-sm leading-relaxed">{genieSummary}</p>
-            <p className="mt-3 text-[11px] uppercase tracking-widest text-white/35">
-              {genieSummarySubtext}
-            </p>
           </div>
         </button>
       </div>
@@ -427,8 +421,8 @@ export const DashboardInterface = () => {
         <AddFundsModal address={walletAddress} onClose={() => setShowAddFunds(false)} />
       )}
       {showYieldPreview && (
-        <div className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm px-4 py-6 flex items-end">
-          <div className="w-full max-w-md mx-auto bg-background border border-white/10 rounded-[28px] p-6 text-white">
+        <div className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm px-4 py-6 flex items-center justify-center">
+          <div className="w-full max-w-sm mx-auto bg-background border border-white/10 rounded-[28px] p-5 text-white">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="font-headline text-[10px] uppercase tracking-[0.25em] text-accent mb-2">
@@ -478,7 +472,7 @@ export const DashboardInterface = () => {
                   <div>
                     <p className="text-white/40 text-[11px] uppercase tracking-widest">Suggested deposit</p>
                     <p className="mt-2 text-sm text-white/60">
-                      Genie suggests parking 60% of your idle USDC in yield for this proof of concept.
+                      Genie suggests parking 60% of your idle USDC in yield.
                     </p>
                   </div>
                   <button
@@ -519,10 +513,7 @@ export const DashboardInterface = () => {
                 )}
               </div>
               <p className="mt-4 text-sm text-white/60 leading-relaxed">
-                For the proof of concept, Genie will route your USDC into one curated World Chain vault. Tapping deposit opens one bundled wallet transaction to approve USDC and deposit it.
-              </p>
-              <p className="mt-3 text-[11px] uppercase tracking-widest text-white/35 break-all">
-                Vault {RE7_USDC_VAULT_ADDRESS}
+                Tapping deposit opens one bundled wallet transaction to approve USDC and deposit it into this vault.
               </p>
             </div>
 
