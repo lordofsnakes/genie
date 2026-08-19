@@ -1,0 +1,8 @@
+{
+  "name": "@genie/sui-contracts",
+  "private": true,
+  "scripts": {
+    "build": "sui move build",
+    "test": "sui move test"
+  }
+}

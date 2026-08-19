@@ -23,7 +23,10 @@
         "NEXT_PUBLIC_APP_ID",
         "NEXT_PUBLIC_WORLD_ACTION",
         "AUTH_SECRET",
-        "HMAC_SECRET_KEY"
+        "HMAC_SECRET_KEY",
+        "SUI_GRPC_URL",
+        "SUI_PACKAGE_ID",
+        "NEXT_PUBLIC_SUI_GRPC_URL"
       ]
     },
     "db:push": {

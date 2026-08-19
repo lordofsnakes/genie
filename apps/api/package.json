@@ -12,6 +12,7 @@
     "@circle-fin/bridge-kit": "^1.8.1",
     "@genie/db": "workspace:*",
     "@hono/node-server": "^1.19.12",
+    "@mysten/sui": "2.26.2",
     "ai": "^6.0.146",
     "ethers": "^6.16.0",
     "hono": "^4.12.10",
