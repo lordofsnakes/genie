@@ -10,6 +10,11 @@ const ErudaProvider = process.env.NODE_ENV === 'development'
   ? dynamic(() => import('@/providers/Eruda').then((c) => c.ErudaProvider), { ssr: false })
   : ({ children }: { children: ReactNode }) => <>{children}</>;
 
+const SuiClientProvider = dynamic(
+  () => import('@/providers/Sui').then((module) => module.SuiClientProvider),
+  { ssr: false },
+);
+
 // Define props for ClientProviders
 interface ClientProvidersProps {
   children: ReactNode;
@@ -35,9 +40,11 @@ export default function ClientProviders({
   return (
     <ErudaProvider>
       <MiniKitProvider props={{ appId: process.env.NEXT_PUBLIC_APP_ID }}>
-        <SessionProvider session={session}>
-          <ChatProvider>{children}</ChatProvider>
-        </SessionProvider>
+        <SuiClientProvider>
+          <SessionProvider session={session}>
+            <ChatProvider>{children}</ChatProvider>
+          </SessionProvider>
+        </SuiClientProvider>
       </MiniKitProvider>
     </ErudaProvider>
   );

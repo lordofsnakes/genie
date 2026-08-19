@@ -4,6 +4,7 @@ import { getPublicApiBaseUrl, getPublicApiUrl } from '@/lib/backend-url';
 import { MiniKit } from '@worldcoin/minikit-js';
 import { getSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
+import { SuiWalletCard } from '@/components/SuiWalletCard';
 
 type ProbeResult = {
   status?: number;
@@ -47,6 +48,10 @@ export default function DebugPage() {
   return (
     <main style={{ padding: 24, color: 'white', background: '#111', minHeight: '100vh' }}>
       <h1 style={{ fontSize: 24, marginBottom: 16 }}>Genie Local Debug</h1>
+
+      <div style={{ maxWidth: 420, marginBottom: 24 }}>
+        <SuiWalletCard />
+      </div>
 
       <section style={{ display: 'grid', gap: 12, fontFamily: 'monospace', fontSize: 13 }}>
         <div>origin: {origin}</div>

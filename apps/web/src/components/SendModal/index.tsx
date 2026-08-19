@@ -10,10 +10,13 @@ import {
 } from '@/lib/minikit';
 import { useUserOperationReceipt } from '@worldcoin/minikit-react';
 import { useEffect, useState } from 'react';
+import { useCurrentAccount, useDAppKit } from '@mysten/dapp-kit-react';
+import { buildSuiPaymentTransaction, isSuiPaymentPlan, SUI_NETWORK } from '@/lib/sui';
 
-type ChainOption = 'World Chain' | 'Base' | 'Arbitrum' | 'Ethereum' | 'Optimism';
+type ChainOption = 'Sui' | 'World Chain' | 'Base' | 'Arbitrum' | 'Ethereum' | 'Optimism';
 
 const CHAIN_OPTIONS: { value: ChainOption; label: string }[] = [
+  { value: 'Sui', label: 'Sui Testnet (default)' },
   { value: 'World Chain', label: 'World Chain (instant)' },
   { value: 'Base', label: 'Base (~15 min)' },
   { value: 'Arbitrum', label: 'Arbitrum (~15 min)' },
@@ -31,11 +34,16 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
   const [visible, setVisible] = useState(false);
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
-  const [selectedChain, setSelectedChain] = useState<ChainOption>('World Chain');
+  const [selectedChain, setSelectedChain] = useState<ChainOption>('Sui');
   const [confirmData, setConfirmData] = useState<ConfirmCardData | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
-  const { poll, isLoading } = useUserOperationReceipt({ client: worldChainReceiptClient });
+  const { poll, isLoading } = useUserOperationReceipt({
+    client: worldChainReceiptClient,
+  });
+  const suiAccount = useCurrentAccount();
+  const suiDAppKit = useDAppKit();
 
   useEffect(() => {
     const t = requestAnimationFrame(() => setVisible(true));
@@ -44,7 +52,9 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, []);
 
   const handleClose = () => {
@@ -61,12 +71,20 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
         recipient: recipient.trim(),
         amount: parseFloat(amount),
         chain: selectedChain,
+        sender: selectedChain === 'Sui' ? suiAccount?.address : undefined,
+        description: description.trim(),
       }),
     });
   };
 
   const handleSend = async () => {
     if (!recipient.trim() || !amount || parseFloat(amount) <= 0) return;
+    if (selectedChain === 'Sui' && !suiAccount) {
+      setErrorMessage('Connect a Sui wallet before sending on testnet.');
+      setStatus('error');
+      setTimeout(() => setStatus('idle'), 2500);
+      return;
+    }
     setErrorMessage('');
     setStatus('sending');
 
@@ -81,7 +99,42 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
         return;
       }
 
-      if (isWalletTransactionRequiredResponse(json)) {
+      if (isSuiPaymentPlan(json)) {
+        if (!suiAccount || json.sender !== suiAccount.address) {
+          throw new Error('Connected Sui account changed. Please prepare the payment again.');
+        }
+        if (json.network !== SUI_NETWORK) {
+          throw new Error('Genie only signs Sui testnet transactions.');
+        }
+
+        const transaction = buildSuiPaymentTransaction(json);
+        const result = await suiDAppKit.signAndExecuteTransaction({
+          transaction,
+          account: suiAccount,
+          network: SUI_NETWORK,
+        });
+        if (result.FailedTransaction) {
+          throw new Error(result.FailedTransaction.status.error?.message ?? 'Sui transaction failed');
+        }
+
+        const finalizeRes = await fetch(getPublicApiUrl('/api/sui/confirm'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            txId: json.txId,
+            userId,
+            digest: result.Transaction.digest,
+          }),
+        });
+        const finalizeJson = await finalizeRes.json();
+        if (!finalizeRes.ok && finalizeRes.status !== 409) {
+          throw new Error(finalizeJson.message ?? finalizeJson.error ?? 'Payment verification failed');
+        }
+
+        setStatus('success');
+        window.dispatchEvent(new Event('genie:sui-payment'));
+        setTimeout(handleClose, 1500);
+      } else if (isWalletTransactionRequiredResponse(json)) {
         const { userOpHash } = await executeMiniKitTransactions(json.txPlan);
         const receipt = await poll(userOpHash);
         const finalHash = extractMiniKitTransactionHash(receipt) ?? userOpHash;
@@ -149,7 +202,11 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
               <span className="font-headline text-[10px] uppercase tracking-widest text-white/40 font-bold">
                 Confirm Transfer
               </span>
-              <button onClick={handleClose} className="w-7 h-7 flex items-center justify-center text-white/40 active:text-white" aria-label="Close">
+              <button
+                onClick={handleClose}
+                className="w-7 h-7 flex items-center justify-center text-white/40 active:text-white"
+                aria-label="Close"
+              >
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
             </div>
@@ -159,9 +216,7 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
           <>
             {/* Header */}
             <div className="flex items-center justify-between">
-              <span className="font-headline text-[10px] uppercase tracking-widest text-white/40 font-bold">
-                Send
-              </span>
+              <span className="font-headline text-[10px] uppercase tracking-widest text-white/40 font-bold">Send</span>
               <button
                 onClick={handleClose}
                 className="w-7 h-7 flex items-center justify-center text-white/40 active:text-white"
@@ -191,10 +246,10 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
             {/* Amount */}
             <div className="flex flex-col gap-1.5">
               <p className="font-headline text-[10px] uppercase tracking-widest text-white/40 font-bold">
-                Amount (USDC)
+                Amount ({selectedChain === 'Sui' ? 'SUI' : 'USDC'})
               </p>
               <div className="bg-background flex items-center px-4 py-3">
-                <span className="text-white/30 font-bold mr-1 select-none">$</span>
+                <span className="text-white/30 font-bold mr-1 select-none">{selectedChain === 'Sui' ? '◎' : '$'}</span>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -204,13 +259,15 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
                   className="flex-1 bg-transparent outline-none text-white placeholder:text-white/20 appearance-none"
                   style={{ fontSize: '16px' }}
                 />
-                <span className="text-white/30 text-xs uppercase tracking-wider ml-2">USDC</span>
+                <span className="text-white/30 text-xs uppercase tracking-wider ml-2">
+                  {selectedChain === 'Sui' ? 'SUI' : 'USDC'}
+                </span>
               </div>
             </div>
 
             {/* Quick amounts */}
             <div className="grid grid-cols-4 gap-2">
-              {['10', '25', '50', '100'].map((amt) => (
+              {(selectedChain === 'Sui' ? ['0.01', '0.05', '0.1', '0.25'] : ['10', '25', '50', '100']).map((amt) => (
                 <button
                   key={amt}
                   onClick={() => setAmount(amt)}
@@ -220,10 +277,29 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
                     color: amount === amt ? '#000' : '#fff',
                   }}
                 >
-                  ${amt}
+                  {selectedChain === 'Sui' ? amt : `$${amt}`}
                 </button>
               ))}
             </div>
+
+            {selectedChain === 'Sui' && (
+              <div className="flex flex-col gap-1.5">
+                <p className="font-headline text-[10px] uppercase tracking-widest text-white/40 font-bold">
+                  Note (stored in receipt)
+                </p>
+                <div className="bg-background flex items-center px-4 py-3">
+                  <input
+                    type="text"
+                    value={description}
+                    maxLength={280}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Dinner, tickets, rent…"
+                    className="flex-1 bg-transparent outline-none text-white placeholder:text-white/20"
+                    style={{ fontSize: '16px' }}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Destination Chain */}
             <div className="flex flex-col gap-1.5">
@@ -254,14 +330,24 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
                 World Chain sends now open a wallet transaction prompt for the bundled Permit2 approval and transfer.
               </p>
             )}
+            {selectedChain === 'Sui' && (
+              <div className="border border-[#6fbcf0]/25 bg-[#6fbcf0]/5 px-3 py-2.5">
+                <p className="text-[11px] text-[#9ed8ff] leading-relaxed">
+                  Testnet only · sends real testnet SUI and mints an on-chain payment receipt.
+                </p>
+                {!suiAccount && (
+                  <p className="mt-1 text-[11px] text-white/50">Connect your Sui wallet from the Home card first.</p>
+                )}
+              </div>
+            )}
 
             {/* Status message */}
-            {status === 'success' && selectedChain === 'World Chain' && (
+            {status === 'success' && (selectedChain === 'World Chain' || selectedChain === 'Sui') && (
               <p className="text-xs text-accent text-center font-headline font-bold uppercase tracking-widest">
-                Sent successfully!
+                {selectedChain === 'Sui' ? 'Confirmed on Sui testnet!' : 'Sent successfully!'}
               </p>
             )}
-            {status === 'success' && selectedChain !== 'World Chain' && (
+            {status === 'success' && selectedChain !== 'World Chain' && selectedChain !== 'Sui' && (
               <p className="text-xs text-accent text-center font-headline font-bold uppercase tracking-widest">
                 Bridge initiated! ~15 min to arrive.
               </p>
@@ -274,7 +360,7 @@ export function SendModal({ onClose, userId, refetchBalance }: SendModalProps) {
             {/* CTA */}
             <button
               onClick={handleSend}
-              disabled={!canSend}
+              disabled={!canSend || (selectedChain === 'Sui' && !suiAccount)}
               className="w-full bg-accent text-black font-headline font-bold text-sm uppercase tracking-widest py-4 active:scale-95 transition-transform disabled:opacity-30 disabled:pointer-events-none"
             >
               {status === 'sending' ? 'Sending…' : 'Send'}

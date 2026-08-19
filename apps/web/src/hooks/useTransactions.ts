@@ -6,6 +6,10 @@ export interface Transaction {
   senderUserId: string;
   recipientWallet: string;
   amountUsd: string;
+  amountRaw: string | null;
+  asset: string;
+  network: string;
+  senderWallet: string | null;
   txHash: string | null;
   status: string;
   category: string | null;

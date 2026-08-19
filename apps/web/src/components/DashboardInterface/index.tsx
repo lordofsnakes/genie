@@ -2,7 +2,7 @@
 
 import { AddFundsModal } from '@/components/AddFundsModal';
 import { ReceiveModal } from '@/components/ReceiveModal';
-import { SendModal } from '@/components/SendModal';
+import { SuiWalletCard } from '@/components/SuiWalletCard';
 import { YieldDepositModal } from '@/components/YieldDepositModal';
 import { useBalance } from '@/hooks/useBalance';
 import { useDebts } from '@/hooks/useDebts';
@@ -20,8 +20,14 @@ import {
   RE7_USDC_VAULT_PROVIDER,
 } from '@/lib/yield';
 import { useSession } from 'next-auth/react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+
+const SendModal = dynamic(
+  () => import('@/components/SendModal').then((module) => module.SendModal),
+  { ssr: false },
+);
 
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr);
@@ -147,6 +153,10 @@ export const DashboardInterface = () => {
             <p className="text-sm leading-relaxed">{homeSuggestion.message}</p>
           </div>
         </button>
+      </div>
+
+      <div className="px-6 mb-7">
+        <SuiWalletCard />
       </div>
 
       {/* ── Total Balance ── */}
@@ -283,9 +293,16 @@ export const DashboardInterface = () => {
                     <p className="text-[11px] text-white/40">{formatRelativeTime(tx.createdAt)}</p>
                   </div>
                 </div>
-                <p className="font-headline font-bold text-sm text-white/60">
-                  -{parseFloat(tx.amountUsd).toFixed(2)} USDC
-                </p>
+                <div className="text-right">
+                  <p className="font-headline font-bold text-sm text-white/60">
+                    -{tx.asset === 'SUI' && tx.amountRaw
+                      ? `${(Number(tx.amountRaw) / 1_000_000_000).toFixed(4)} SUI`
+                      : `${parseFloat(tx.amountUsd).toFixed(2)} USDC`}
+                  </p>
+                  {tx.network === 'sui:testnet' && (
+                    <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-[#6fbcf0]">Testnet</p>
+                  )}
+                </div>
               </div>
             ))
           )}
