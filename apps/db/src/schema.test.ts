@@ -68,6 +68,10 @@ describe('transactions table', () => {
     expect(cols).toContain('senderUserId');
     expect(cols).toContain('recipientWallet');
     expect(cols).toContain('amountUsd');
+    expect(cols).toContain('amountRaw');
+    expect(cols).toContain('asset');
+    expect(cols).toContain('network');
+    expect(cols).toContain('senderWallet');
     expect(cols).toContain('txHash');
     expect(cols).toContain('executedAt');
     expect(cols).toContain('category');
@@ -85,6 +89,8 @@ describe('transactions table', () => {
 
     // source is not null with default
     expect((transactions.source as any).notNull).toBe(true);
+    expect((transactions.asset as any).notNull).toBe(true);
+    expect((transactions.network as any).notNull).toBe(true);
   });
 });
 
@@ -162,6 +168,8 @@ describe('insert/select round-trips', () => {
     expect(tx.recipientWallet).toBe('0xRECIPIENT001');
     expect(tx.amountUsd).toBe('42.50');
     expect(tx.txHash).toBeNull();
+    expect(tx.asset).toBe('USDC');
+    expect(tx.network).toBe('worldchain');
 
     const [fetchedTx] = await db.select().from(transactions).where(eq(transactions.id, tx.id));
     expect(fetchedTx.amountUsd).toBe('42.50');
