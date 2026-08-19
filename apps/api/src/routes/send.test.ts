@@ -64,6 +64,8 @@ app.route('/', sendRoute);
 
 const VALID_USER_ID = 'user-uuid-001';
 const VALID_RECIPIENT = '0x1234567890123456789012345678901234567890';
+const VALID_SUI_SENDER = `0x${'2'.repeat(64)}`;
+const VALID_SUI_RECIPIENT = `0x${'3'.repeat(64)}`;
 const VERIFIED_USER = {
   id: VALID_USER_ID,
   walletAddress: '0xSender0000000000000000000000000000000001',
@@ -206,5 +208,54 @@ describe('POST /send', () => {
     const json = await res.json() as Record<string, unknown>;
     expect(json.type).toBe('wallet_transaction_required');
     expect(mockPrepareTransfer).toHaveBeenCalled();
+  });
+
+  it('prepares an exact Sui testnet payment linked to the connected sender', async () => {
+    const res = await app.fetch(makeRequest({
+      userId: VALID_USER_ID,
+      sender: VALID_SUI_SENDER,
+      recipient: VALID_SUI_RECIPIENT,
+      amount: 0.125,
+      chain: 'Sui',
+      description: 'Hackathon lunch',
+    }));
+
+    expect(res.status).toBe(200);
+    const json = await res.json() as Record<string, unknown>;
+    expect(json.type).toBe('sui_transaction_required');
+    expect(json.network).toBe('testnet');
+    expect(json.amountMist).toBe('125000000');
+    expect(json.sender).toBe(VALID_SUI_SENDER);
+    expect(json.recipient).toBe(VALID_SUI_RECIPIENT);
+    expect(mockDbInsertValues).toHaveBeenCalledWith(expect.objectContaining({
+      asset: 'SUI',
+      network: 'sui:testnet',
+      amountRaw: '125000000',
+      senderWallet: VALID_SUI_SENDER,
+      recipientWallet: VALID_SUI_RECIPIENT,
+    }));
+    expect(mockPrepareTransfer).not.toHaveBeenCalled();
+  });
+
+  it('rejects a Sui payment without a connected sender address', async () => {
+    const res = await app.fetch(makeRequest({
+      userId: VALID_USER_ID,
+      recipient: VALID_SUI_RECIPIENT,
+      amount: 0.1,
+      chain: 'Sui',
+    }));
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects the Sui zero address as a payment recipient', async () => {
+    const res = await app.fetch(makeRequest({
+      userId: VALID_USER_ID,
+      sender: VALID_SUI_SENDER,
+      recipient: `0x${'0'.repeat(64)}`,
+      amount: 0.1,
+      chain: 'Sui',
+    }));
+    expect(res.status).toBe(400);
+    expect(mockDbInsertValues).not.toHaveBeenCalled();
   });
 });

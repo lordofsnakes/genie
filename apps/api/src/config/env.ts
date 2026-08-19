@@ -56,3 +56,9 @@ export const WINDOW_LIMIT = parseInt(process.env.WINDOW_LIMIT ?? '40', 10);
 export const ALLOW_UNVERIFIED_AGENT_ACTIONS =
   process.env.ALLOW_UNVERIFIED_AGENT_ACTIONS === 'true';
 export const MOCK_CHAIN_TRANSFERS = process.env.MOCK_CHAIN_TRANSFERS === 'true';
+
+// --- Sui testnet ---
+export const SUI_NETWORK = 'testnet' as const;
+export const SUI_GRPC_URL = optionalEnv('SUI_GRPC_URL') ?? 'https://fullnode.testnet.sui.io:443';
+export const SUI_PACKAGE_ID =
+  optionalEnv('SUI_PACKAGE_ID') ?? '0xdd3d4ae5128ac7337b2858622eb89e8dbd1b342f9112e3be1964e110f834bf9b';

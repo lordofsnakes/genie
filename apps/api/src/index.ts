@@ -11,6 +11,7 @@ import { sendRoute } from './routes/send';
 import { debtsRoute } from './routes/debts';
 import { transactionsRoute } from './routes/transactions';
 import { versionRoute } from './routes/version';
+import { suiConfirmRoute } from './routes/sui-confirm';
 import { PORT } from './config/env';
 
 const app = new Hono();
@@ -26,6 +27,7 @@ app.route('/api/send', sendRoute);
 app.route('/api/debts', debtsRoute);
 app.route('/api/transactions', transactionsRoute);
 app.route('/api/version', versionRoute);
+app.route('/api/sui/confirm', suiConfirmRoute);
 
 app.notFound((c) => {
   console.error(`[genie-api] 404 Not Found: ${c.req.method} ${c.req.url}`);
